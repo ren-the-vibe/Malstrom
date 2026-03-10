@@ -34,6 +34,7 @@ export class CableManager {
         const startY = rect.top + rect.height / 2 - containerRect.top + this.rackContainer.scrollTop;
 
         const path = this._createPathEl(this._nextColor());
+        path.style.pointerEvents = 'none'; // Don't intercept mouseup during drag
         this.svg.appendChild(path);
 
         this.dragging = {
@@ -61,8 +62,9 @@ export class CableManager {
 
     window.addEventListener('mouseup', (e) => {
       if (!this.dragging) return;
-      // Check if we ended on an input jack
-      const jack = e.target.closest('.jack');
+      // Use elementsFromPoint to find the jack under cursor, regardless of SVG overlay
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      const jack = elements.find(el => el.classList?.contains('jack'));
       if (jack && jack.dataset.jackDir === 'input') {
         this._completeConnection(jack.dataset.moduleId, jack.dataset.jackName, jack.dataset.jackType);
       } else {
@@ -166,6 +168,47 @@ export class CableManager {
 
   getOutputConnections(moduleId) {
     return this.connections.filter(c => c.from.moduleId === moduleId);
+  }
+
+  addConnection(fromModuleId, fromJackName, toModuleId, toJackName) {
+    const fromJack = this.rackContainer.querySelector(
+      `.jack[data-module-id="${fromModuleId}"][data-jack-name="${fromJackName}"]`
+    );
+    const toJack = this.rackContainer.querySelector(
+      `.jack[data-module-id="${toModuleId}"][data-jack-name="${toJackName}"]`
+    );
+    if (!fromJack || !toJack) return;
+
+    this.disconnectInput(toModuleId, toJackName);
+
+    const containerRect = this.rackContainer.getBoundingClientRect();
+    const fromRect = fromJack.getBoundingClientRect();
+    const toRect = toJack.getBoundingClientRect();
+    const x1 = fromRect.left + fromRect.width / 2 - containerRect.left + this.rackContainer.scrollLeft;
+    const y1 = fromRect.top + fromRect.height / 2 - containerRect.top + this.rackContainer.scrollTop;
+    const x2 = toRect.left + toRect.width / 2 - containerRect.left + this.rackContainer.scrollLeft;
+    const y2 = toRect.top + toRect.height / 2 - containerRect.top + this.rackContainer.scrollTop;
+
+    const color = this._nextColor();
+    const pathEl = this._createPathEl(color);
+    this.svg.appendChild(pathEl);
+    this._updatePath(pathEl, x1, y1, x2, y2);
+
+    const conn = {
+      id: ++this._connectionId,
+      from: { moduleId: fromModuleId, jackName: fromJackName },
+      to: { moduleId: toModuleId, jackName: toJackName },
+      color, pathEl
+    };
+
+    pathEl.style.pointerEvents = 'stroke';
+    pathEl.addEventListener('click', () => this.removeConnection(conn.id));
+
+    fromJack.classList.add('connected');
+    toJack.classList.add('connected');
+    this.connections.push(conn);
+
+    if (this.onConnectionChange) this.onConnectionChange();
   }
 
   getSourceModule(moduleId, jackName) {

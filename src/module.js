@@ -196,6 +196,22 @@ export class Module {
     return config;
   }
 
+  restoreConfig(config) {
+    // Restore selects first (some have cascading dependencies, e.g., sampler bank→sample)
+    for (const [name, select] of Object.entries(this.selects)) {
+      if (config[name] !== undefined) {
+        select.value = config[name];
+        select.dispatchEvent(new Event('change'));
+      }
+    }
+    for (const [name, knob] of Object.entries(this.knobs)) {
+      if (config[name] !== undefined) knob.value = config[name];
+    }
+    for (const [name, input] of Object.entries(this.textInputs)) {
+      if (config[name] !== undefined) input.value = config[name];
+    }
+  }
+
   getJackPosition(jackName) {
     const jackEl = this.jackEls[jackName];
     if (!jackEl) return null;

@@ -10,6 +10,19 @@ const SAMPLE_BANKS = {
   misc: ['metal', 'industrial', 'glitch', 'noise']
 };
 
+// Shared registry for CDN-loaded sample packs (populated by sample browser)
+export const loadedPacks = new Map(); // packName -> [sampleNames]
+
+function getAllBankNames() {
+  return [...Object.keys(SAMPLE_BANKS), ...loadedPacks.keys()];
+}
+
+function getSamplesForBank(bank) {
+  if (SAMPLE_BANKS[bank]) return SAMPLE_BANKS[bank];
+  if (loadedPacks.has(bank)) return loadedPacks.get(bank);
+  return [];
+}
+
 export class SamplerModule extends Module {
   constructor() {
     super('sampler', 'Sampler', {
@@ -20,7 +33,7 @@ export class SamplerModule extends Module {
 
   renderBody() {
     const div = document.createElement('div');
-    div.appendChild(this.createSelect('bank', Object.keys(SAMPLE_BANKS), 'drums'));
+    div.appendChild(this.createSelect('bank', getAllBankNames(), 'drums'));
     div.appendChild(this.createSelect('sample', SAMPLE_BANKS.drums, 'bd'));
     const row = document.createElement('div');
     row.className = 'knob-row';
@@ -32,7 +45,7 @@ export class SamplerModule extends Module {
       const bank = this.selects.bank.value;
       const sampleSelect = this.selects.sample;
       sampleSelect.innerHTML = '';
-      for (const s of (SAMPLE_BANKS[bank] || [])) {
+      for (const s of getSamplesForBank(bank)) {
         const opt = document.createElement('option');
         opt.value = s;
         opt.textContent = s;
@@ -40,7 +53,25 @@ export class SamplerModule extends Module {
       }
     });
 
+    // Listen for CDN sample pack updates
+    this._samplesUpdatedHandler = () => this._refreshBankList();
+    document.addEventListener('malstrom:samples-updated', this._samplesUpdatedHandler);
+
     return div;
+  }
+
+  _refreshBankList() {
+    const bankSelect = this.selects.bank;
+    if (!bankSelect) return;
+    const currentBank = bankSelect.value;
+    bankSelect.innerHTML = '';
+    for (const name of getAllBankNames()) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      if (name === currentBank) opt.selected = true;
+      bankSelect.appendChild(opt);
+    }
   }
 
   compile(inputCode) {

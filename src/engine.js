@@ -5,6 +5,7 @@ export class Engine {
     this.initialized = false;
     this.playing = false;
     this._strudel = null;
+    this._useCdnSamples = false;
   }
 
   async init() {
@@ -16,7 +17,6 @@ export class Engine {
       if (strudelPath) {
         this._strudel = await import(strudelPath);
       } else {
-        // Fallback: try bare import (works if bundler is configured)
         this._strudel = await import('@strudel/web');
       }
 
@@ -34,22 +34,23 @@ export class Engine {
     if (!this.initialized) await this.init();
 
     if (!code || !code.trim()) {
-      console.warn('No code to evaluate');
+      throw new Error('No code to evaluate — connect modules to an Output');
+    }
+
+    if (this._fallbackMode) {
+      console.log('Strudel code (fallback mode):', code);
+      this.playing = true;
       return;
     }
 
-    try {
-      if (this._fallbackMode) {
-        console.log('Strudel code (fallback mode):', code);
-        this.playing = true;
-        return;
-      }
-
-      await this._strudel.evaluate(code);
-      this.playing = true;
-    } catch (err) {
-      console.error('Evaluation error:', err);
+    // Prepend CDN samples loader if needed
+    let fullCode = code;
+    if (this._useCdnSamples) {
+      fullCode = `await samples('https://strudel-samples.alternet.site/strudel.json')\n${code}`;
     }
+
+    await this._strudel.evaluate(fullCode);
+    this.playing = true;
   }
 
   async stop() {
@@ -61,6 +62,16 @@ export class Engine {
       console.error('Stop error:', err);
     }
     this.playing = false;
+  }
+
+  setBpm(bpm) {
+    if (this._strudel && !this._fallbackMode && this._strudel.setcps) {
+      this._strudel.setcps(bpm / 60 / 4);
+    }
+  }
+
+  enableCdnSamples() {
+    this._useCdnSamples = true;
   }
 
   async initAudio() {

@@ -5,6 +5,9 @@ import { CableManager } from './cable.js';
 import { Compiler } from './compiler.js';
 import { Engine } from './engine.js';
 import { MODULE_CATEGORIES, createModule } from './modules/index.js';
+import { loadedPacks } from './modules/sampler.js';
+
+const SAMPLE_CDN = 'https://strudel-samples.alternet.site';
 
 class App {
   constructor() {
@@ -12,7 +15,7 @@ class App {
     this.cables = null;
     this.compiler = null;
     this.engine = null;
-    this.autoCompile = true;
+    this._sampleIndex = null; // cached strudel.json
   }
 
   init() {
@@ -62,19 +65,51 @@ class App {
         audioStatus.className = 'status-dot on';
       }
       const code = this._recompile();
-      if (code) {
+      compiledCodeEl.classList.remove('error');
+      btnPlay.classList.remove('error');
+
+      if (!code) {
+        compiledCodeEl.textContent = 'Nothing to play — connect modules to an Output';
+        compiledCodeEl.classList.add('error');
+        return;
+      }
+
+      try {
         await this.engine.play(code);
-        btnPlay.classList.add('active');
+        btnPlay.classList.add('playing');
+        btnPlay.classList.remove('error');
         btnStop.classList.remove('active');
+      } catch (err) {
+        btnPlay.classList.remove('playing');
+        btnPlay.classList.add('error');
+        compiledCodeEl.textContent = `Error: ${err.message}`;
+        compiledCodeEl.classList.add('error');
+        setTimeout(() => {
+          btnPlay.classList.remove('error');
+          compiledCodeEl.classList.remove('error');
+        }, 4000);
       }
     });
 
     btnStop.addEventListener('click', async () => {
       await this.engine.stop();
-      btnPlay.classList.remove('active');
+      btnPlay.classList.remove('playing', 'error');
       btnStop.classList.add('active');
       setTimeout(() => btnStop.classList.remove('active'), 300);
     });
+
+    // BPM wiring
+    bpmInput.addEventListener('change', () => {
+      const bpm = parseInt(bpmInput.value, 10);
+      if (bpm >= 20 && bpm <= 300) this.engine.setBpm(bpm);
+    });
+
+    // Save / Load
+    document.getElementById('btn-save')?.addEventListener('click', () => this._saveProject());
+    document.getElementById('btn-load')?.addEventListener('click', () => this._loadProject());
+
+    // Sample browser
+    this._initSampleBrowser();
 
     // Refresh cable positions on scroll/resize
     rackContainer.addEventListener('scroll', () => this.cables.refreshPositions());
@@ -87,6 +122,8 @@ class App {
       }
     }, 500);
   }
+
+  // ── Palette ──
 
   _buildPalette(container) {
     for (const category of MODULE_CATEGORIES) {
@@ -110,10 +147,7 @@ class App {
         label.textContent = modDef.label;
         item.appendChild(label);
 
-        item.addEventListener('click', () => {
-          this._addModule(modDef.type);
-        });
-
+        item.addEventListener('click', () => this._addModule(modDef.type));
         catDiv.appendChild(item);
       }
 
@@ -124,21 +158,210 @@ class App {
   _addModule(type) {
     const module = createModule(type);
     if (!module) return;
-
-    // Wire onChange to recompile
     module.onChange = () => this._recompile();
-
     this.rack.addModule(module);
-
-    // Refresh cable positions after module is added
     requestAnimationFrame(() => this.cables.refreshPositions());
+    return module;
   }
 
   _recompile() {
     const code = this.compiler.compile();
     const compiledCodeEl = document.getElementById('compiled-code');
+    compiledCodeEl.classList.remove('error');
     compiledCodeEl.textContent = code || '(no connections to output)';
     return code;
+  }
+
+  // ── Save / Load ──
+
+  _getProjectState() {
+    const modules = this.rack.getAllModules().map(m => m.getConfig());
+    const connections = this.cables.connections.map(c => ({
+      from: { moduleId: c.from.moduleId, jackName: c.from.jackName },
+      to: { moduleId: c.to.moduleId, jackName: c.to.jackName }
+    }));
+    return { modules, connections };
+  }
+
+  async _saveProject() {
+    if (!window.malstrom?.saveProject) {
+      console.warn('Save not available (no IPC)');
+      return;
+    }
+    const state = this._getProjectState();
+    const code = this._recompile() || '';
+    await window.malstrom.saveProject({ state, code });
+  }
+
+  async _loadProject() {
+    if (!window.malstrom?.loadProject) {
+      console.warn('Load not available (no IPC)');
+      return;
+    }
+    const result = await window.malstrom.loadProject();
+    if (result.canceled) return;
+
+    // Stop playback
+    await this.engine.stop();
+    document.getElementById('btn-play').classList.remove('playing', 'error');
+
+    // Clear current state
+    this.rack.clear();
+
+    // Rebuild with ID mapping
+    const idMap = {};
+    for (const modConfig of result.state.modules) {
+      const module = createModule(modConfig.type);
+      if (!module) continue;
+      module.onChange = () => this._recompile();
+      this.rack.addModule(module);
+      idMap[modConfig.id] = module.id;
+      module.restoreConfig(modConfig);
+    }
+
+    // Restore connections after DOM settles
+    requestAnimationFrame(() => {
+      for (const conn of result.state.connections) {
+        const fromId = idMap[conn.from.moduleId];
+        const toId = idMap[conn.to.moduleId];
+        if (!fromId || !toId) continue;
+        this.cables.addConnection(fromId, conn.from.jackName, toId, conn.to.jackName);
+      }
+      this._recompile();
+    });
+  }
+
+  // ── Sample Browser ──
+
+  _initSampleBrowser() {
+    const modal = document.getElementById('sample-browser-modal');
+    const btnSamples = document.getElementById('btn-samples');
+    if (!modal || !btnSamples) return;
+
+    const overlay = modal;
+    const searchInput = modal.querySelector('.sb-search');
+    const packList = modal.querySelector('.sb-pack-list');
+    const sampleList = modal.querySelector('.sb-sample-list');
+    const packTitle = modal.querySelector('.sb-pack-title');
+    const btnLoad = modal.querySelector('.sb-load-btn');
+    const btnClose = modal.querySelector('.sb-close');
+
+    let selectedPack = null;
+    let currentAudio = null;
+
+    btnSamples.addEventListener('click', async () => {
+      modal.classList.add('visible');
+      if (!this._sampleIndex) {
+        packList.innerHTML = '<div class="sb-loading">Loading sample index...</div>';
+        try {
+          const resp = await fetch(`${SAMPLE_CDN}/strudel.json`);
+          this._sampleIndex = await resp.json();
+        } catch (err) {
+          packList.innerHTML = '<div class="sb-loading">Failed to load sample index</div>';
+          return;
+        }
+      }
+      renderPacks('');
+    });
+
+    btnClose.addEventListener('click', () => {
+      modal.classList.remove('visible');
+      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        modal.classList.remove('visible');
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      }
+    });
+
+    searchInput?.addEventListener('input', () => renderPacks(searchInput.value));
+
+    const renderPacks = (filter) => {
+      packList.innerHTML = '';
+      if (!this._sampleIndex) return;
+      const names = Object.keys(this._sampleIndex)
+        .filter(n => !filter || n.toLowerCase().includes(filter.toLowerCase()))
+        .sort();
+      for (const name of names) {
+        const item = document.createElement('div');
+        item.className = 'sb-pack-item';
+        item.textContent = name;
+        if (loadedPacks.has(name)) item.classList.add('loaded');
+        item.addEventListener('click', () => {
+          packList.querySelectorAll('.sb-pack-item').forEach(el => el.classList.remove('selected'));
+          item.classList.add('selected');
+          selectedPack = name;
+          renderSamples(name);
+        });
+        packList.appendChild(item);
+      }
+    };
+
+    const renderSamples = (packName) => {
+      sampleList.innerHTML = '';
+      packTitle.textContent = packName;
+      const samples = this._sampleIndex[packName];
+      if (!samples) return;
+
+      // samples can be an object (key -> array of URLs) or an array
+      const entries = typeof samples === 'object' && !Array.isArray(samples)
+        ? Object.entries(samples)
+        : [['samples', Array.isArray(samples) ? samples : [samples]]];
+
+      for (const [key, urls] of entries) {
+        const urlList = Array.isArray(urls) ? urls : [urls];
+        for (const url of urlList) {
+          const filename = typeof url === 'string' ? url.split('/').pop() : String(url);
+          const item = document.createElement('div');
+          item.className = 'sb-sample-item';
+
+          const nameEl = document.createElement('span');
+          nameEl.textContent = key !== 'samples' ? `${key}: ${filename}` : filename;
+          item.appendChild(nameEl);
+
+          const previewBtn = document.createElement('button');
+          previewBtn.className = 'sb-preview-btn';
+          previewBtn.textContent = '\u25B6';
+          previewBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+            const audioUrl = typeof url === 'string' && url.startsWith('http')
+              ? url
+              : `${SAMPLE_CDN}/${url}`;
+            currentAudio = new Audio(audioUrl);
+            currentAudio.play().catch(() => {});
+          });
+          item.appendChild(previewBtn);
+
+          sampleList.appendChild(item);
+        }
+      }
+    };
+
+    btnLoad?.addEventListener('click', () => {
+      if (!selectedPack || !this._sampleIndex[selectedPack]) return;
+
+      // Register pack with sampler modules
+      const samples = this._sampleIndex[selectedPack];
+      let sampleNames;
+      if (typeof samples === 'object' && !Array.isArray(samples)) {
+        sampleNames = Object.keys(samples);
+      } else {
+        sampleNames = [selectedPack];
+      }
+      loadedPacks.set(selectedPack, sampleNames);
+      this.engine.enableCdnSamples();
+
+      // Notify sampler modules
+      document.dispatchEvent(new CustomEvent('malstrom:samples-updated'));
+
+      // Mark as loaded in UI
+      packList.querySelectorAll('.sb-pack-item').forEach(el => {
+        if (el.textContent === selectedPack) el.classList.add('loaded');
+      });
+    });
   }
 }
 

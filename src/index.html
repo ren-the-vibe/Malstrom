@@ -12,6 +12,8 @@
   <header id="transport">
     <div class="transport-left">
       <span class="logo">MALSTROM</span>
+      <button id="btn-save" class="transport-btn" title="Save Project">Save</button>
+      <button id="btn-load" class="transport-btn" title="Load Project">Load</button>
     </div>
     <div class="transport-center">
       <button id="btn-play" class="transport-btn" title="Play">&#9654;</button>
@@ -22,6 +24,7 @@
       </div>
     </div>
     <div class="transport-right">
+      <button id="btn-samples" class="transport-btn" title="Browse Samples">Samples</button>
       <button id="btn-init-audio" class="transport-btn accent" title="Initialize Audio">Start Audio</button>
       <span id="audio-status" class="status-dot off"></span>
     </div>
@@ -48,6 +51,28 @@
     <span class="code-label">Strudel:</span>
     <code id="compiled-code"></code>
   </footer>
+
+  <!-- Sample Browser Modal -->
+  <div id="sample-browser-modal" class="sb-overlay">
+    <div class="sb-modal">
+      <div class="sb-header">
+        <h3>Sample Browser</h3>
+        <input type="text" class="sb-search" placeholder="Search packs...">
+        <button class="sb-close">&times;</button>
+      </div>
+      <div class="sb-body">
+        <div class="sb-packs">
+          <div class="sb-section-title">Packs</div>
+          <div class="sb-pack-list"></div>
+        </div>
+        <div class="sb-samples">
+          <div class="sb-section-title sb-pack-title">Select a pack</div>
+          <div class="sb-sample-list"></div>
+          <button class="sb-load-btn transport-btn accent">Load Pack</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js" type="module"></script>
 </body>
