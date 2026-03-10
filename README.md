@@ -1,2 +1,2 @@
 # Malstrom
-A Visual Interfface for Strudel
+A Visual Interface for Strudel
