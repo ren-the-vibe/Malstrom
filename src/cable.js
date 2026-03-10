@@ -113,8 +113,8 @@ export class CableManager {
       pathEl: this.dragging.pathEl
     };
 
-    // Click to delete cable
-    conn.pathEl.style.pointerEvents = 'stroke';
+    // Enable click-to-delete on finalized cable
+    conn.pathEl.classList.add('connected');
     conn.pathEl.addEventListener('click', () => {
       this.removeConnection(conn.id);
     });
@@ -201,7 +201,7 @@ export class CableManager {
       color, pathEl
     };
 
-    pathEl.style.pointerEvents = 'stroke';
+    pathEl.classList.add('connected');
     pathEl.addEventListener('click', () => this.removeConnection(conn.id));
 
     fromJack.classList.add('connected');

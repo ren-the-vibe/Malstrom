@@ -265,12 +265,12 @@ html, body {
   z-index: 10;
 }
 
-#cables path {
+#cables path.connected {
   pointer-events: stroke;
   cursor: pointer;
 }
 
-#cables path:hover {
+#cables path.connected:hover {
   stroke-width: 4;
   filter: brightness(1.3);
 }
