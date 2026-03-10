@@ -4,30 +4,26 @@ export class Engine {
   constructor() {
     this.initialized = false;
     this.playing = false;
-    this._strudel = null;
+    this._strudel = null;   // module-level exports (evaluate, hush, initStrudel, samples)
+    this._repl = null;      // repl object returned by initStrudel (has setcps, setCps)
     this._useCdnSamples = false;
   }
 
   async init() {
     if (this.initialized) return;
 
-    try {
-      // Import the pre-bundled strudel dist using the path from preload
-      const strudelPath = window.malstrom?.strudelPath;
-      if (strudelPath) {
-        this._strudel = await import(strudelPath);
-      } else {
-        this._strudel = await import('@strudel/web');
-      }
-
-      // initStrudel sets up AudioContext, loads synth sounds, registers modules
-      await this._strudel.initStrudel();
-      this.initialized = true;
-    } catch (err) {
-      console.error('Failed to init Strudel:', err);
-      this.initialized = true;
-      this._fallbackMode = true;
+    // Import the pre-bundled strudel dist using the path from preload
+    const strudelPath = window.malstrom?.strudelPath;
+    if (strudelPath) {
+      this._strudel = await import(strudelPath);
+    } else {
+      this._strudel = await import('@strudel/web');
     }
+
+    // initStrudel sets up AudioContext, loads synth sounds, registers modules
+    // It returns a repl object with { evaluate, hush, setcps, setCps, ... }
+    this._repl = await this._strudel.initStrudel();
+    this.initialized = true;
   }
 
   async play(code) {
@@ -37,16 +33,10 @@ export class Engine {
       throw new Error('No code to evaluate — connect modules to an Output');
     }
 
-    if (this._fallbackMode) {
-      console.log('Strudel code (fallback mode):', code);
-      this.playing = true;
-      return;
-    }
-
     // Prepend CDN samples loader if needed
     let fullCode = code;
     if (this._useCdnSamples) {
-      fullCode = `await samples('https://strudel-samples.alternet.site/strudel.json')\n${code}`;
+      fullCode = `await samples('github:tidalcycles/Dirt-Samples')\n${code}`;
     }
 
     await this._strudel.evaluate(fullCode);
@@ -55,7 +45,7 @@ export class Engine {
 
   async stop() {
     try {
-      if (this._strudel && !this._fallbackMode) {
+      if (this._strudel && this.initialized) {
         this._strudel.hush();
       }
     } catch (err) {
@@ -65,8 +55,9 @@ export class Engine {
   }
 
   setBpm(bpm) {
-    if (this._strudel && !this._fallbackMode && this._strudel.setcps) {
-      this._strudel.setcps(bpm / 60 / 4);
+    // setcps is on the repl object, not a module-level export
+    if (this._repl?.setcps) {
+      this._repl.setcps(bpm / 60 / 4);
     }
   }
 

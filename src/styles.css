@@ -289,6 +289,20 @@ html, body {
   user-select: none;
 }
 
+@keyframes module-pulse {
+  0%, 100% { box-shadow: 0 0 4px var(--accent), 0 2px 8px rgba(0,0,0,0.3); }
+  50% { box-shadow: 0 0 12px var(--accent), 0 0 20px rgba(0,212,255,0.2), 0 2px 8px rgba(0,0,0,0.3); }
+}
+
+.module.active {
+  border-color: var(--accent);
+  animation: module-pulse 2s ease-in-out infinite;
+}
+
+.module.active .module-header {
+  background: linear-gradient(90deg, var(--bg-module-header), rgba(0,212,255,0.15));
+}
+
 .module-header {
   display: flex;
   align-items: center;

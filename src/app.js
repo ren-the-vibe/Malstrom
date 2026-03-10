@@ -7,7 +7,7 @@ import { Engine } from './engine.js';
 import { MODULE_CATEGORIES, createModule } from './modules/index.js';
 import { loadedPacks } from './modules/sampler.js';
 
-const SAMPLE_CDN = 'https://strudel-samples.alternet.site';
+const SAMPLE_CDN_JSON = 'https://raw.githubusercontent.com/tidalcycles/Dirt-Samples/master/strudel.json';
 
 class App {
   constructor() {
@@ -53,20 +53,39 @@ class App {
 
     // Transport controls
     btnInitAudio.addEventListener('click', async () => {
-      await this.engine.initAudio();
-      audioStatus.className = 'status-dot on';
-      btnInitAudio.textContent = 'Audio Ready';
-      btnInitAudio.classList.add('active');
+      try {
+        await this.engine.initAudio();
+        audioStatus.className = 'status-dot on';
+        btnInitAudio.textContent = 'Audio Ready';
+        btnInitAudio.classList.add('active');
+      } catch (err) {
+        compiledCodeEl.textContent = `Audio init error: ${err.message}`;
+        compiledCodeEl.classList.add('error');
+        console.error('Audio init failed:', err);
+      }
     });
 
     btnPlay.addEventListener('click', async () => {
-      if (!this.engine.isInitialized()) {
-        await this.engine.initAudio();
-        audioStatus.className = 'status-dot on';
-      }
-      const code = this._recompile();
       compiledCodeEl.classList.remove('error');
       btnPlay.classList.remove('error');
+
+      try {
+        if (!this.engine.isInitialized()) {
+          compiledCodeEl.textContent = 'Initializing Strudel...';
+          await this.engine.initAudio();
+          audioStatus.className = 'status-dot on';
+          btnInitAudio.textContent = 'Audio Ready';
+          btnInitAudio.classList.add('active');
+        }
+      } catch (err) {
+        btnPlay.classList.add('error');
+        compiledCodeEl.textContent = `Engine init error: ${err.message}`;
+        compiledCodeEl.classList.add('error');
+        console.error('Engine init failed:', err);
+        return;
+      }
+
+      const code = this._recompile();
 
       if (!code) {
         compiledCodeEl.textContent = 'Nothing to play — connect modules to an Output';
@@ -79,15 +98,17 @@ class App {
         btnPlay.classList.add('playing');
         btnPlay.classList.remove('error');
         btnStop.classList.remove('active');
+        this._setModulesActive(true);
       } catch (err) {
         btnPlay.classList.remove('playing');
         btnPlay.classList.add('error');
         compiledCodeEl.textContent = `Error: ${err.message}`;
         compiledCodeEl.classList.add('error');
+        console.error('Play failed:', err);
         setTimeout(() => {
           btnPlay.classList.remove('error');
           compiledCodeEl.classList.remove('error');
-        }, 4000);
+        }, 6000);
       }
     });
 
@@ -95,6 +116,7 @@ class App {
       await this.engine.stop();
       btnPlay.classList.remove('playing', 'error');
       btnStop.classList.add('active');
+      this._setModulesActive(false);
       setTimeout(() => btnStop.classList.remove('active'), 300);
     });
 
@@ -170,6 +192,30 @@ class App {
     compiledCodeEl.classList.remove('error');
     compiledCodeEl.textContent = code || '(no connections to output)';
     return code;
+  }
+
+  // Highlight modules in the active signal chain when playing
+  _setModulesActive(active) {
+    const allModules = this.rack.getAllModules();
+    if (!active) {
+      allModules.forEach(m => m.el?.classList.remove('active'));
+      return;
+    }
+    // Find modules connected to the output chain
+    const connectedIds = new Set();
+    const terminals = allModules.filter(m => m.type === 'output');
+    const visit = (moduleId) => {
+      if (connectedIds.has(moduleId)) return;
+      connectedIds.add(moduleId);
+      const inputs = this.cables.getInputConnections(moduleId);
+      for (const conn of inputs) {
+        visit(conn.from.moduleId);
+      }
+    };
+    for (const t of terminals) visit(t.id);
+    allModules.forEach(m => {
+      m.el?.classList.toggle('active', connectedIds.has(m.id));
+    });
   }
 
   // ── Save / Load ──
@@ -254,10 +300,18 @@ class App {
       if (!this._sampleIndex) {
         packList.innerHTML = '<div class="sb-loading">Loading sample index...</div>';
         try {
-          const resp = await fetch(`${SAMPLE_CDN}/strudel.json`);
-          this._sampleIndex = await resp.json();
+          const resp = await fetch(SAMPLE_CDN_JSON);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const data = await resp.json();
+          // Extract _base URL for sample audio preview
+          this._sampleBase = data._base || SAMPLE_CDN_JSON.replace(/strudel\.json$/, '');
+          // Filter out metadata keys
+          this._sampleIndex = {};
+          for (const [k, v] of Object.entries(data)) {
+            if (!k.startsWith('_')) this._sampleIndex[k] = v;
+          }
         } catch (err) {
-          packList.innerHTML = '<div class="sb-loading">Failed to load sample index</div>';
+          packList.innerHTML = `<div class="sb-loading">Failed to load sample index: ${err.message}</div>`;
           return;
         }
       }
@@ -329,7 +383,7 @@ class App {
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
             const audioUrl = typeof url === 'string' && url.startsWith('http')
               ? url
-              : `${SAMPLE_CDN}/${url}`;
+              : `${this._sampleBase}${url}`;
             currentAudio = new Audio(audioUrl);
             currentAudio.play().catch(() => {});
           });
