@@ -1,0 +1,27 @@
+{
+  "name": "malstrom",
+  "version": "0.1.0",
+  "description": "A Visual Interface for Strudel",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "@strudel/web": "^1.3.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.malstrom.app",
+    "productName": "Malstrom",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "node_modules/**/*"
+    ]
+  }
+}

@@ -1,0 +1,77 @@
+// Audio Engine — wraps Strudel/WebAudio for pattern evaluation and playback
+
+export class Engine {
+  constructor() {
+    this.initialized = false;
+    this.playing = false;
+    this._strudel = null;
+  }
+
+  async init() {
+    if (this.initialized) return;
+
+    try {
+      // Import the pre-bundled strudel dist using the path from preload
+      const strudelPath = window.malstrom?.strudelPath;
+      if (strudelPath) {
+        this._strudel = await import(strudelPath);
+      } else {
+        // Fallback: try bare import (works if bundler is configured)
+        this._strudel = await import('@strudel/web');
+      }
+
+      // initStrudel sets up AudioContext, loads synth sounds, registers modules
+      await this._strudel.initStrudel();
+      this.initialized = true;
+    } catch (err) {
+      console.error('Failed to init Strudel:', err);
+      this.initialized = true;
+      this._fallbackMode = true;
+    }
+  }
+
+  async play(code) {
+    if (!this.initialized) await this.init();
+
+    if (!code || !code.trim()) {
+      console.warn('No code to evaluate');
+      return;
+    }
+
+    try {
+      if (this._fallbackMode) {
+        console.log('Strudel code (fallback mode):', code);
+        this.playing = true;
+        return;
+      }
+
+      await this._strudel.evaluate(code);
+      this.playing = true;
+    } catch (err) {
+      console.error('Evaluation error:', err);
+    }
+  }
+
+  async stop() {
+    try {
+      if (this._strudel && !this._fallbackMode) {
+        this._strudel.hush();
+      }
+    } catch (err) {
+      console.error('Stop error:', err);
+    }
+    this.playing = false;
+  }
+
+  async initAudio() {
+    await this.init();
+  }
+
+  isPlaying() {
+    return this.playing;
+  }
+
+  isInitialized() {
+    return this.initialized;
+  }
+}

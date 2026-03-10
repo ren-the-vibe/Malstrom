@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src *; connect-src *;">
+  <title>Malstrom</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Transport Bar -->
+  <header id="transport">
+    <div class="transport-left">
+      <span class="logo">MALSTROM</span>
+    </div>
+    <div class="transport-center">
+      <button id="btn-play" class="transport-btn" title="Play">&#9654;</button>
+      <button id="btn-stop" class="transport-btn" title="Stop">&#9632;</button>
+      <div class="bpm-control">
+        <label for="bpm">BPM</label>
+        <input type="number" id="bpm" value="120" min="20" max="300" step="1">
+      </div>
+    </div>
+    <div class="transport-right">
+      <button id="btn-init-audio" class="transport-btn accent" title="Initialize Audio">Start Audio</button>
+      <span id="audio-status" class="status-dot off"></span>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div id="main">
+    <!-- Module Palette Sidebar -->
+    <aside id="palette">
+      <h2>Modules</h2>
+      <div id="palette-list"></div>
+    </aside>
+
+    <!-- Rack Area -->
+    <div id="rack-container">
+      <div id="rack"></div>
+      <!-- SVG Cable Overlay -->
+      <svg id="cables" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <!-- Debug / Compiled Code Viewer -->
+  <footer id="code-viewer">
+    <span class="code-label">Strudel:</span>
+    <code id="compiled-code"></code>
+  </footer>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
