@@ -152,7 +152,14 @@ export class Module {
     container.appendChild(labelEl);
     container.appendChild(valueEl);
 
-    this.knobs[name] = { get value() { return value; }, set value(v) { value = v; updateDisplay(); } };
+    this.knobs[name] = {
+      get value() { return value; },
+      set value(v) {
+        value = Math.min(max, Math.max(min, v));
+        if (step >= 1) value = Math.round(value / step) * step;
+        updateDisplay();
+      }
+    };
     return container;
   }
 
