@@ -38,6 +38,7 @@ class App {
 
     // Wire up module removal to cable cleanup
     this.rack.onModuleRemoved = (module) => {
+      window.__malstromModules?.delete(module.id);
       this.cables.removeModuleConnections(module.id);
       this._recompile();
     };
@@ -49,6 +50,9 @@ class App {
 
     // Build palette sidebar
     this._buildPalette(paletteList);
+
+    // Register global trigger handler for per-note visualization
+    this._setupTriggerHandler();
 
     // Transport controls
     btnInitAudio.addEventListener('click', async () => {
@@ -93,11 +97,12 @@ class App {
       }
 
       try {
+        // Reset trigger counters on all modules
+        this._resetAllTriggers();
         await this.engine.play(code);
         btnPlay.classList.add('playing');
         btnPlay.classList.remove('error');
         btnStop.classList.remove('active');
-        this._setModulesActive(true);
       } catch (err) {
         btnPlay.classList.remove('playing');
         btnPlay.classList.add('error');
@@ -115,7 +120,7 @@ class App {
       await this.engine.stop();
       btnPlay.classList.remove('playing', 'error');
       btnStop.classList.add('active');
-      this._setModulesActive(false);
+      this._resetAllTriggers();
       setTimeout(() => btnStop.classList.remove('active'), 300);
     });
 
@@ -145,6 +150,31 @@ class App {
         this.cables.refreshPositions();
       }
     }, 500);
+  }
+
+  // ── Trigger Handling ──
+
+  _setupTriggerHandler() {
+    window.__malstromTrigger = (hap) => {
+      if (!hap || !this.engine.isPlaying()) return;
+      const value = hap.value || hap;
+      // Flash all registered modules in the active chain
+      const modules = window.__malstromModules;
+      if (!modules) return;
+      for (const [id, mod] of modules) {
+        if (mod.flashTrigger) {
+          mod.flashTrigger(value);
+        }
+      }
+    };
+  }
+
+  _resetAllTriggers() {
+    const modules = window.__malstromModules;
+    if (!modules) return;
+    for (const [id, mod] of modules) {
+      if (mod.resetTrigger) mod.resetTrigger();
+    }
   }
 
   // ── Palette ──
@@ -197,30 +227,6 @@ class App {
     return code;
   }
 
-  // Highlight modules in the active signal chain when playing
-  _setModulesActive(active) {
-    const allModules = this.rack.getAllModules();
-    if (!active) {
-      allModules.forEach(m => m.el?.classList.remove('active'));
-      return;
-    }
-    // Find modules connected to the output chain
-    const connectedIds = new Set();
-    const terminals = allModules.filter(m => m.type === 'output');
-    const visit = (moduleId) => {
-      if (connectedIds.has(moduleId)) return;
-      connectedIds.add(moduleId);
-      const inputs = this.cables.getInputConnections(moduleId);
-      for (const conn of inputs) {
-        visit(conn.from.moduleId);
-      }
-    };
-    for (const t of terminals) visit(t.id);
-    allModules.forEach(m => {
-      m.el?.classList.toggle('active', connectedIds.has(m.id));
-    });
-  }
-
   // ── Code Preview Panel ──
 
   _initCodePanel() {
@@ -241,7 +247,6 @@ class App {
     const statusEl = document.getElementById('code-panel-status');
     if (!previewEl) return;
 
-    // Build full code: sample imports + module code
     const imports = this.engine.getSampleImports();
     let fullCode = '';
     if (imports.length > 0) {
@@ -269,17 +274,25 @@ class App {
 
   async _saveProject() {
     if (!window.malstrom?.saveProject) {
-      console.warn('Save not available (no IPC)');
+      const compiledCodeEl = document.getElementById('compiled-code');
+      compiledCodeEl.textContent = 'Save not available — IPC not ready';
+      compiledCodeEl.classList.add('error');
       return;
     }
     const state = this._getProjectState();
     const code = this._recompile() || '';
-    await window.malstrom.saveProject({ state, code });
+    const result = await window.malstrom.saveProject({ state, code });
+    if (!result.canceled) {
+      const compiledCodeEl = document.getElementById('compiled-code');
+      compiledCodeEl.textContent = `Saved to ${result.filePath}`;
+    }
   }
 
   async _loadProject() {
     if (!window.malstrom?.loadProject) {
-      console.warn('Load not available (no IPC)');
+      const compiledCodeEl = document.getElementById('compiled-code');
+      compiledCodeEl.textContent = 'Load not available — IPC not ready';
+      compiledCodeEl.classList.add('error');
       return;
     }
     const result = await window.malstrom.loadProject();
@@ -288,6 +301,7 @@ class App {
     // Stop playback
     await this.engine.stop();
     document.getElementById('btn-play').classList.remove('playing', 'error');
+    this._resetAllTriggers();
 
     // Check if this is a plain strudel code file (no frontmatter)
     if (result.plainStrudel) {
@@ -330,12 +344,10 @@ class App {
   }
 
   _handlePlainStrudel(code) {
-    // For now, show a clear error - this can be refined later
     const compiledCodeEl = document.getElementById('compiled-code');
     compiledCodeEl.textContent = "CAN'T PARSE THIS STRUDEL INTO MALSTROM — file contains raw strudel code without module configuration";
     compiledCodeEl.classList.add('error');
 
-    // Show the code in the preview panel so the user can see it
     const previewEl = document.getElementById('code-preview');
     if (previewEl) {
       previewEl.textContent = '// Imported strudel code (cannot decompose into modules):\n' + code;
@@ -362,25 +374,20 @@ class App {
     const iframe = modal.querySelector('.sb-iframe');
     const btnReload = modal.querySelector('.sb-browse-reload');
 
-    // Store reference for external refresh
     this._importListEl = importList;
 
-    // Close modal
     const closeModal = () => modal.classList.remove('visible');
     btnClose.addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-    // Open modal
     btnSamples.addEventListener('click', () => {
       modal.classList.add('visible');
-      // Load iframe on first open
       if (iframe.src === 'about:blank') {
         iframe.src = ALTERNET_URL;
       }
       this._renderImportList(importList);
     });
 
-    // Add import code
     const addImport = () => {
       const code = importInput.value.trim();
       if (!code) return;
@@ -388,6 +395,8 @@ class App {
       importInput.value = '';
       this._renderImportList(importList);
       this._recompile();
+      // Fetch sample names for Sampler module integration
+      this._fetchPackSamples(code);
     };
 
     btnAdd.addEventListener('click', addImport);
@@ -395,10 +404,47 @@ class App {
       if (e.key === 'Enter') addImport();
     });
 
-    // Reload iframe
     btnReload.addEventListener('click', () => {
       iframe.src = ALTERNET_URL;
     });
+  }
+
+  // Parse pack name from import code and fetch its strudel.json
+  async _fetchPackSamples(importCode) {
+    const packName = this._parsePackName(importCode);
+    if (!packName) return;
+
+    try {
+      const firstSegment = packName.split('/')[0];
+      let url;
+      if (firstSegment.includes('.')) {
+        url = `https://${packName}/strudel.json`;
+      } else {
+        url = `https://raw.githubusercontent.com/${packName}/refs/heads/main/strudel.json`;
+      }
+      const resp = await fetch(url);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const sampleNames = Object.keys(data).filter(k => !k.startsWith('_'));
+      if (sampleNames.length > 0) {
+        loadedPacks.set(packName, sampleNames);
+        document.dispatchEvent(new CustomEvent('malstrom:samples-updated'));
+      }
+    } catch {
+      // Silently ignore fetch failures
+    }
+  }
+
+  _parsePackName(importCode) {
+    // Extract pack name from: samples('github:user/repo') or samples('https://domain/path')
+    const match = importCode.match(/samples\s*\(\s*['"](?:github:)?([^'"]+)['"]\s*\)/);
+    if (!match) return null;
+    let name = match[1];
+    // Strip trailing /strudel.json if present
+    name = name.replace(/\/strudel\.json$/, '');
+    // Strip https:// prefix
+    name = name.replace(/^https?:\/\//, '');
+    return name;
   }
 
   _renderImportList(container) {

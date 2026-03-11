@@ -309,6 +309,91 @@ body {
   background: linear-gradient(90deg, var(--bg-module-header), rgba(0,212,255,0.15));
 }
 
+/* === Note Token Row (Sequence modules) === */
+.note-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.note-token {
+  display: inline-block;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  background: var(--bg);
+  border: 1px solid transparent;
+  transition: background 0.05s;
+}
+
+@keyframes note-flash {
+  0% { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  100% { background: var(--bg); color: var(--text-dim); border-color: transparent; }
+}
+
+.note-token.triggered {
+  animation: note-flash 0.3s ease-out forwards;
+}
+
+/* === Step Dots (Euclid modules) === */
+.step-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 6px;
+  justify-content: center;
+}
+
+.step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  transition: background 0.05s, box-shadow 0.05s;
+}
+
+.step-dot.hit {
+  background: var(--bg-module-header);
+  border-color: var(--text-dim);
+}
+
+.step-dot.triggered {
+  background: var(--accent) !important;
+  border-color: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+/* === Module Trigger Flash (Sampler/Wavetable) === */
+.module-trigger-flash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+@keyframes module-flash {
+  0% { opacity: 0.3; background: var(--accent); }
+  100% { opacity: 0; }
+}
+
+.module-trigger-flash.triggered {
+  animation: module-flash 0.15s ease-out forwards;
+}
+
+/* Triggered select highlight */
+.module-select.triggered {
+  border-color: var(--accent);
+  box-shadow: 0 0 4px var(--accent);
+}
+
 .module-header {
   display: flex;
   align-items: center;

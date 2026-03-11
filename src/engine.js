@@ -13,12 +13,9 @@ export class Engine {
     if (this.initialized) return;
 
     // Import strudel using a relative path from src/ to node_modules/
-    // (bare specifiers like '@strudel/web' don't work in browser import(),
-    //  and absolute paths from preload don't resolve as valid module URLs)
     this._strudel = await import('../node_modules/@strudel/web/dist/index.mjs');
 
     // initStrudel sets up AudioContext, loads synth sounds, registers modules
-    // It returns a repl object with { evaluate, hush, setcps, setCps, ... }
     this._repl = await this._strudel.initStrudel();
     this.initialized = true;
   }
@@ -37,7 +34,17 @@ export class Engine {
       fullCode = imports + '\n' + code;
     }
 
-    await this._strudel.evaluate(fullCode);
+    // Append trigger hook for per-note visualization
+    fullCode += `.onTrigger((hap) => window.__malstromTrigger?.(hap), false)`;
+
+    console.log('[Malstrom] Evaluating:', fullCode);
+
+    try {
+      await this._strudel.evaluate(fullCode);
+    } catch (err) {
+      console.error('[Malstrom] Evaluate failed:', err, '\nCode:', fullCode);
+      throw new Error(`Strudel eval: ${err.message}`);
+    }
     this.playing = true;
   }
 
@@ -53,7 +60,6 @@ export class Engine {
   }
 
   setBpm(bpm) {
-    // setcps is on the repl object, not a module-level export
     if (this._repl?.setcps) {
       this._repl.setcps(bpm / 60 / 4);
     }

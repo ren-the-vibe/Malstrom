@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -11,6 +11,9 @@ try {
 }
 
 function createWindow() {
+  // Hide Electron default menu
+  Menu.setApplicationMenu(null);
+
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -18,6 +21,7 @@ function createWindow() {
     minHeight: 600,
     backgroundColor: '#1a1a2e',
     title: 'Malstrom',
+    autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

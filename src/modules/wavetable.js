@@ -1,5 +1,7 @@
 import { Module } from '../module.js';
 
+if (!window.__malstromModules) window.__malstromModules = new Map();
+
 const WAVETABLES = [
   'saw', 'square', 'tri', 'sine',
   'akwf_0001', 'akwf_0002', 'akwf_0003', 'akwf_0004', 'akwf_0005',
@@ -17,7 +19,24 @@ export class WavetableModule extends Module {
   renderBody() {
     const div = document.createElement('div');
     div.appendChild(this.createSelect('table', WAVETABLES, 'saw'));
+
+    this._flashEl = document.createElement('div');
+    this._flashEl.className = 'module-trigger-flash';
+    div.appendChild(this._flashEl);
+
+    window.__malstromModules.set(this.id, this);
     return div;
+  }
+
+  flashTrigger() {
+    if (!this._flashEl) return;
+    this._flashEl.classList.remove('triggered');
+    void this._flashEl.offsetWidth;
+    this._flashEl.classList.add('triggered');
+  }
+
+  resetTrigger() {
+    this._flashEl?.classList.remove('triggered');
   }
 
   compile(inputCode) {

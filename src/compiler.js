@@ -65,11 +65,14 @@ export class Compiler {
       if (sourceModuleId) {
         const sourceModule = this.rack.getModule(sourceModuleId);
         if (sourceModule) {
-          const code = this._compileModule(sourceModule, visited);
+          // Clone visited per branch so one branch can't block another
+          const branchVisited = new Set(visited);
+          const code = this._compileModule(sourceModule, branchVisited);
           if (code) inputCodes.push(code);
         }
       }
     }
+    visited.add(module.id);
     return module.compile(inputCodes);
   }
 
@@ -85,14 +88,17 @@ export class Compiler {
       }
     }
 
-    // Get mod/control input
+    // Get mod/control input — use separate visited clone so mod doesn't conflict with main
     let modCode = null;
     const modInputName = this._getModInput(module);
     if (modInputName) {
       const modSourceId = this.cables.getSourceModule(module.id, modInputName);
       if (modSourceId) {
         const modSource = this.rack.getModule(modSourceId);
-        if (modSource) modCode = this._compileModule(modSource, visited);
+        if (modSource) {
+          const modVisited = new Set(visited);
+          modCode = this._compileModule(modSource, modVisited);
+        }
       }
     }
 

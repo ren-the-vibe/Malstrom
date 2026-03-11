@@ -13,6 +13,8 @@ const SAMPLE_BANKS = {
 // Shared registry for CDN-loaded sample packs (populated by sample browser)
 export const loadedPacks = new Map(); // packName -> [sampleNames]
 
+if (!window.__malstromModules) window.__malstromModules = new Map();
+
 function getAllBankNames() {
   return [...Object.keys(SAMPLE_BANKS), ...loadedPacks.keys()];
 }
@@ -40,6 +42,11 @@ export class SamplerModule extends Module {
     row.appendChild(this.createKnob('n', 'N', 0, 15, 0, 1));
     div.appendChild(row);
 
+    // Trigger flash indicator
+    this._flashEl = document.createElement('div');
+    this._flashEl.className = 'module-trigger-flash';
+    div.appendChild(this._flashEl);
+
     // Update sample list when bank changes
     this.selects.bank.addEventListener('change', () => {
       const bank = this.selects.bank.value;
@@ -57,6 +64,9 @@ export class SamplerModule extends Module {
     this._samplesUpdatedHandler = () => this._refreshBankList();
     document.addEventListener('malstrom:samples-updated', this._samplesUpdatedHandler);
 
+    // Register for trigger events
+    window.__malstromModules.set(this.id, this);
+
     return div;
   }
 
@@ -72,6 +82,17 @@ export class SamplerModule extends Module {
       if (name === currentBank) opt.selected = true;
       bankSelect.appendChild(opt);
     }
+  }
+
+  flashTrigger() {
+    if (!this._flashEl) return;
+    this._flashEl.classList.remove('triggered');
+    void this._flashEl.offsetWidth;
+    this._flashEl.classList.add('triggered');
+  }
+
+  resetTrigger() {
+    this._flashEl?.classList.remove('triggered');
   }
 
   compile(inputCode) {
