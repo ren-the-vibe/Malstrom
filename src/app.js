@@ -9,6 +9,64 @@ import { loadedPacks } from './modules/sampler.js';
 
 const ALTERNET_URL = 'https://strudel-samples.alternet.site';
 
+// Embedded snapshot of strudel-samples.alternet.site pack list (fallback when Cloudflare blocks fetch)
+const EMBEDDED_PACKS = [
+  ['strudel.cc/tidal-drum-machines', 683], ['strudel.cc/vcsl', 128], ['strudel.cc/uzu-drumkit', 16],
+  ['strudel.cc/mridangam', 13], ['strudel.cc/piano', 1], ['samples.grbt.com.au', 629],
+  ['sonidosingapura/blu-mar-ten/Breaks', 448], ['sonidosingapura/blu-mar-ten/Riffs_Arps_Hits', 260],
+  ['sonidosingapura/blu-mar-ten/FX', 240], ['tidalcycles/Dirt-Samples', 218],
+  ['sonidosingapura/blu-mar-ten/Pads', 152], ['sonidosingapura/blu-mar-ten/Vocals', 136],
+  ['Bubobubobubobubo/Dough-Amiga', 116], ['sonidosingapura/blu-mar-ten/Bass', 114],
+  ['yaxu/spicule', 75], ['Bubobubobubobubo/Dough-Waveforms', 65],
+  ['Bubobubobubobubo/Dough-Fox', 63], ['Bubobubobubobubo/Dough-Bourges', 45],
+  ['neshanjo/strudel-producer-space-samples', 37], ['MartinMaguna/samplesKzur', 35],
+  ['mmmgarlic/randumsample', 35], ['mistipher/studel-beats', 32],
+  ['sandpills/v10101a-samples', 32], ['yaxu/clean-breaks', 32],
+  ['AustinOliverHaskell/ms-teams-sounds-strudel', 31], ['proudly-music/breaks', 28],
+  ['terrorhank/samples', 28], ['Bubobubobubobubo/Dough-Samples', 27],
+  ['k09/samples', 27], ['heavy-lifting/a-maze', 26], ['dagurkris/Tidalcycles', 25],
+  ['sound.intercrap.com/strudel/mellotron', 24], ['eddyflux/wax', 21],
+  ['bsssssss/strudel-samples/bs-breaks', 20], ['felixroos/estuary-samples', 19],
+  ['mamalLivecoder/samples', 19], ['alfredojarry/samples_eddyflux_crate', 18],
+  ['eddyflux/crate', 18], ['sonidosingapura/rochormatic', 18], ['felixroos/samples', 17],
+  ['tidalcycles/uzu-drumkit', 16], ['pavlovpavlov/samples', 15], ['emptyflash/samples', 13],
+  ['mot4i/garden', 13], ['yaxu/mrid', 13], ['indiepaleale/strudel-samples', 12],
+  ['sarefo/strudel', 12], ['Naaeeen/LENS', 11], ['algorave-dave/samples', 10],
+  ['byolim/breaks', 10], ['azhadsyed/strudel-samples', 9],
+  ['kyrsive/glorkglunk-wavetables', 9], ['creativenucleus/strudel-m8-168-dnb-jungle', 8],
+  ['KakuyaShiraishi/samples', 8], ['SutterChristian/sampuru', 8],
+  ['vasilymilovidov/samples', 8], ['ross-sec-audio/dsamples', 7],
+  ['tedthetrumpet/testpage/strudelsamples', 7],
+  ['bruveping/RepositorioDESonido_N_3/Codigo_Spectrum_2025', 6],
+  ['mot4i/loom/garden_of_possibilities', 6], ['mot4i/loom/velvet_blues', 6],
+  ['Prof12200/strudel_repo', 6], ['sonidosingapura/blu-mar-ten', 6],
+  ['bsssssss/strudel-samples/bs-sounds', 5],
+  ['Emanuel-de-Jong/L1C0-B3nLib_x86_EXE/assets/audio', 5],
+  ['mot4i/joyinerror/loopy_youpy', 5], ['kaiye10/strudelSamples', 4],
+  ['mysinglelise/msl-strudel-samples', 4], ['prismograph/departure', 4],
+  ['salsicha/capoeira_strudel', 4], ['TodePond/samples/v4', 4], ['TodePond/samples/v5', 4],
+  ['TristanCacqueray/mirus', 4], ['absentfriend2025/samples', 3], ['boggodan/bflute', 3],
+  ['Bubobubobubobubo/Dough-Amen', 3], ['hvillase/cavlp-25p', 3],
+  ['mot4i/loom/manganese_bubble_bath', 3],
+  ['bruveping/RepositorioDESonido_N_3/guitarra_experimental0001', 2],
+  ['ibleedicare/strudel-bank', 2], ['janpc01/samples', 2],
+  ['jessicaaaaaaaaaaaa/strudel-samples', 2], ['mot4i/loom/alpaca_2025', 2],
+  ['mot4i/loom/the_void_is_growing/vox', 2], ['smaudd/joonies-dnb-collection-strudel', 2],
+  ['bruveping/RepositorioDesonidosParaExperimentar02', 1], ['Bubobubobubobubo/Dough-Juj', 1],
+  ['chickenalibi/music', 1], ['cleary/samples-flbass', 1], ['cosmiclavaflow/samples', 1],
+  ['davidshipp/dtl', 1], ['edcrub/samp', 1], ['EloMorelo/samples', 1],
+  ['fstiffo/polifonia-samples', 1], ['gerzytet/strudel-samples', 1],
+  ['HelveticaScenario/trick-shot', 1], ['jpalcala/tidal', 1], ['kyrsive/gc-glitches', 1],
+  ['kyrsive/gc-glitches2', 1], ['kyrsive/gc-wavetables', 1], ['luvl4ne/breaks', 1],
+  ['MartinMaguna/luzmilacarpiosamples', 1], ['mot4i/joyinerror/fraxional_edit', 1],
+  ['mot4i/loom/a_damn_fine_cup_of_coffee', 1], ['mot4i/loom/chill', 1],
+  ['Nikeryms/Samples', 1], ['norrischris/samples', 1], ['potatoboiler/bolero', 1],
+  ['QuantumVillage/quantum-music', 1], ['reema7667/strudel-sounds', 1],
+  ['Samplesbit/Plucks', 1], ['Samplesbit/strudel_samples', 1], ['superbuggy/samples', 1],
+  ['switchangel/breaks', 1], ['switchangel/pad', 1], ['TorenUK/breaks', 1],
+  ['valjason/barrel', 1], ['YAGORAYMOND/samples', 1], ['yaxu/svgs', 1]
+];
+
 class App {
   constructor() {
     this.rack = null;
@@ -440,22 +498,33 @@ class App {
   }
 
   // Fetch and parse the pack list HTML from strudel-samples.alternet.site
+  // Falls back to an embedded snapshot if the site is behind Cloudflare challenge
   async _fetchPackList() {
-    const resp = await fetch(ALTERNET_URL);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const html = await resp.text();
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const rows = doc.querySelectorAll('.packs-table tbody tr');
-    const packs = [];
-    for (const row of rows) {
-      const nameBtn = row.querySelector('.pack-name-btn');
-      const countEl = row.querySelector('.pack-count');
-      if (!nameBtn) continue;
-      const name = nameBtn.textContent.trim();
-      const count = parseInt(countEl?.textContent || '0', 10);
-      packs.push({ name, count, builtin: name.startsWith('strudel.cc/') });
-    }
-    return packs;
+    try {
+      const resp = await fetch(ALTERNET_URL);
+      if (resp.ok) {
+        const html = await resp.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const rows = doc.querySelectorAll('.packs-table tbody tr');
+        if (rows.length > 0) {
+          const packs = [];
+          for (const row of rows) {
+            const nameBtn = row.querySelector('.pack-name-btn');
+            const countEl = row.querySelector('.pack-count');
+            if (!nameBtn) continue;
+            const name = nameBtn.textContent.trim();
+            const count = parseInt(countEl?.textContent || '0', 10);
+            packs.push({ name, count, builtin: name.startsWith('strudel.cc/') });
+          }
+          return packs;
+        }
+      }
+    } catch { /* Cloudflare challenge or network error — fall through to embedded list */ }
+
+    // Embedded snapshot of packs from strudel-samples.alternet.site
+    return EMBEDDED_PACKS.map(([name, count]) => ({
+      name, count, builtin: name.startsWith('strudel.cc/')
+    }));
   }
 
   // Build the strudel import code for a pack name

@@ -12,13 +12,10 @@ export class Engine {
   async init() {
     if (this.initialized) return;
 
-    // Import the pre-bundled strudel dist using the path from preload
-    const strudelPath = window.malstrom?.strudelPath;
-    if (strudelPath) {
-      this._strudel = await import(strudelPath);
-    } else {
-      this._strudel = await import('@strudel/web');
-    }
+    // Import strudel using a relative path from src/ to node_modules/
+    // (bare specifiers like '@strudel/web' don't work in browser import(),
+    //  and absolute paths from preload don't resolve as valid module URLs)
+    this._strudel = await import('../node_modules/@strudel/web/dist/index.mjs');
 
     // initStrudel sets up AudioContext, loads synth sounds, registers modules
     // It returns a repl object with { evaluate, hush, setcps, setCps, ... }
