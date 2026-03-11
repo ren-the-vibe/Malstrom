@@ -46,6 +46,7 @@ import { SpectrumModule } from './spectrum.js';
 import { SpiralModule } from './spiral.js';
 import { OrbitModule } from './orbit.js';
 import { MergeModule } from './merge.js';
+import { BULK_CATEGORIES } from './bulk.js';
 
 // New modules
 import { PalindromeModule } from './palindrome.js';
@@ -225,6 +226,21 @@ export const MODULE_CATEGORIES = [
     ]
   }
 ];
+
+// Merge bulk-generated modules into categories
+for (const bulkCat of BULK_CATEGORIES) {
+  if (bulkCat.append) {
+    // Append to existing category
+    const existing = MODULE_CATEGORIES.find(c => c.name === bulkCat.name);
+    if (existing) {
+      existing.modules.push(...bulkCat.modules);
+    } else {
+      MODULE_CATEGORIES.push(bulkCat);
+    }
+  } else {
+    MODULE_CATEGORIES.push(bulkCat);
+  }
+}
 
 export function createModule(type) {
   for (const cat of MODULE_CATEGORIES) {
