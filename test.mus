@@ -1,0 +1,14 @@
+{
+  "modules": [
+    { "type": "sequence", "id": "mod-1", "pattern": "c3 e3 g3 c4" },
+    { "type": "sampler", "id": "mod-2", "bank": "drums", "sample": "bd", "n": 0 },
+    { "type": "output", "id": "mod-3", "orbit": 0, "gain": 0.8 }
+  ],
+  "connections": [
+    { "from": { "moduleId": "mod-1", "jackName": "out" }, "to": { "moduleId": "mod-2", "jackName": "in" } },
+    { "from": { "moduleId": "mod-2", "jackName": "out" }, "to": { "moduleId": "mod-3", "jackName": "in" } }
+  ],
+  "sampleImports": []
+}
+---
+"c3 e3 g3 c4".s("bd")
