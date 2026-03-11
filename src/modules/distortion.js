@@ -3,7 +3,10 @@ import { Module } from '../module.js';
 export class DistortionModule extends Module {
   constructor() {
     super('distortion', 'Distortion', {
-      inputs: [{ name: 'in', type: 'audio', label: 'in' }],
+      inputs: [
+        { name: 'in', type: 'audio', label: 'in' },
+        { name: 'mod', type: 'control', label: 'mod' }
+      ],
       outputs: [{ name: 'out', type: 'audio', label: 'out' }]
     });
   }
@@ -14,8 +17,9 @@ export class DistortionModule extends Module {
     return div;
   }
 
-  compile(inputCode) {
+  compile(inputCode, modCode) {
     if (!inputCode) return null;
-    return `${inputCode}.distort(${this.knobs.drive.value})`;
+    const drive = modCode || this.knobs.drive.value;
+    return `${inputCode}.distort(${drive})`;
   }
 }

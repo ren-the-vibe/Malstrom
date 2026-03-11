@@ -3,7 +3,10 @@ import { Module } from '../module.js';
 export class TremoloModule extends Module {
   constructor() {
     super('tremolo', 'Tremolo', {
-      inputs: [{ name: 'in', type: 'audio', label: 'in' }],
+      inputs: [
+        { name: 'in', type: 'audio', label: 'in' },
+        { name: 'mod', type: 'control', label: 'mod' }
+      ],
       outputs: [{ name: 'out', type: 'audio', label: 'out' }]
     });
   }
@@ -18,8 +21,9 @@ export class TremoloModule extends Module {
     return div;
   }
 
-  compile(inputCode) {
+  compile(inputCode, modCode) {
     if (!inputCode) return null;
-    return `${inputCode}.tremolo(${this.knobs.rate.value}, ${this.knobs.depth.value})`;
+    const rate = modCode || this.knobs.rate.value;
+    return `${inputCode}.tremolo(${rate}, ${this.knobs.depth.value})`;
   }
 }

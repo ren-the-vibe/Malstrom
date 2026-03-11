@@ -3,7 +3,10 @@ import { Module } from '../module.js';
 export class CrushModule extends Module {
   constructor() {
     super('crush', 'Crush', {
-      inputs: [{ name: 'in', type: 'audio', label: 'in' }],
+      inputs: [
+        { name: 'in', type: 'audio', label: 'in' },
+        { name: 'mod', type: 'control', label: 'mod' }
+      ],
       outputs: [{ name: 'out', type: 'audio', label: 'out' }]
     });
   }
@@ -14,8 +17,9 @@ export class CrushModule extends Module {
     return div;
   }
 
-  compile(inputCode) {
+  compile(inputCode, modCode) {
     if (!inputCode) return null;
-    return `${inputCode}.crush(${Math.round(this.knobs.bits.value)})`;
+    const bits = modCode || Math.round(this.knobs.bits.value);
+    return `${inputCode}.crush(${bits})`;
   }
 }

@@ -3,7 +3,10 @@ import { Module } from '../module.js';
 export class OrbitModule extends Module {
   constructor() {
     super('orbit', 'Orbit', {
-      inputs: [{ name: 'in', type: 'audio', label: 'in' }],
+      inputs: [
+        { name: 'in', type: 'audio', label: 'in' },
+        { name: 'mod', type: 'control', label: 'mod' }
+      ],
       outputs: [{ name: 'out', type: 'audio', label: 'out' }]
     });
   }
@@ -14,8 +17,9 @@ export class OrbitModule extends Module {
     return div;
   }
 
-  compile(inputCode) {
+  compile(inputCode, modCode) {
     if (!inputCode) return null;
-    return `${inputCode}.orbit(${Math.round(this.knobs.number.value)})`;
+    const num = modCode || Math.round(this.knobs.number.value);
+    return `${inputCode}.orbit(${num})`;
   }
 }

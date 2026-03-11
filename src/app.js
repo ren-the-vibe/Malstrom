@@ -163,7 +163,7 @@ class App {
       if (!modules) return;
       for (const [id, mod] of modules) {
         if (mod.flashTrigger) {
-          mod.flashTrigger(value);
+          try { mod.flashTrigger(value); } catch (e) { /* ignore flash errors */ }
         }
       }
     };

@@ -1,7 +1,7 @@
 {
   "modules": [
     { "type": "sequence", "id": "mod-1", "pattern": "c3 e3 g3 c4" },
-    { "type": "sampler", "id": "mod-2", "bank": "drums", "sample": "bd", "n": 0 },
+    { "type": "synth", "id": "mod-2", "waveform": "sawtooth", "fmDepth": 0 },
     { "type": "output", "id": "mod-3", "orbit": 0, "gain": 0.8 }
   ],
   "connections": [

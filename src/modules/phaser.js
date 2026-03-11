@@ -3,7 +3,10 @@ import { Module } from '../module.js';
 export class PhaserModule extends Module {
   constructor() {
     super('phaser', 'Phaser', {
-      inputs: [{ name: 'in', type: 'audio', label: 'in' }],
+      inputs: [
+        { name: 'in', type: 'audio', label: 'in' },
+        { name: 'mod', type: 'control', label: 'mod' }
+      ],
       outputs: [{ name: 'out', type: 'audio', label: 'out' }]
     });
   }
@@ -18,8 +21,9 @@ export class PhaserModule extends Module {
     return div;
   }
 
-  compile(inputCode) {
+  compile(inputCode, modCode) {
     if (!inputCode) return null;
-    return `${inputCode}.phaser(${this.knobs.rate.value}, ${this.knobs.depth.value})`;
+    const rate = modCode || this.knobs.rate.value;
+    return `${inputCode}.phaser(${rate}, ${this.knobs.depth.value})`;
   }
 }

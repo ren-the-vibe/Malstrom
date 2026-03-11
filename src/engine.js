@@ -16,7 +16,18 @@ export class Engine {
     this._strudel = await import('../node_modules/@strudel/web/dist/index.mjs');
 
     // initStrudel sets up AudioContext, loads synth sounds, registers modules
-    this._repl = await this._strudel.initStrudel();
+    // prebake loads default drum/percussion samples so bd, sd, hh etc. work
+    const strudel = this._strudel;
+    this._repl = await strudel.initStrudel({
+      prebake: async () => {
+        try {
+          await strudel.samples('github:tidalcycles/dirt-samples');
+          console.log('[Malstrom] Default samples loaded');
+        } catch (err) {
+          console.warn('[Malstrom] Could not load default samples:', err.message);
+        }
+      }
+    });
     this.initialized = true;
   }
 

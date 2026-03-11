@@ -3,7 +3,10 @@ import { Module } from '../module.js';
 export class DelayModule extends Module {
   constructor() {
     super('delay', 'Delay', {
-      inputs: [{ name: 'in', type: 'audio', label: 'in' }],
+      inputs: [
+        { name: 'in', type: 'audio', label: 'in' },
+        { name: 'mod', type: 'control', label: 'mod' }
+      ],
       outputs: [{ name: 'out', type: 'audio', label: 'out' }]
     });
   }
@@ -18,9 +21,9 @@ export class DelayModule extends Module {
     return div;
   }
 
-  compile(inputCode) {
+  compile(inputCode, modCode) {
     if (!inputCode) return null;
-    const time = this.knobs.time.value;
+    const time = modCode || this.knobs.time.value;
     const fb = this.knobs.feedback.value;
     return `${inputCode}.delay(${time}).delayfeedback(${fb})`;
   }

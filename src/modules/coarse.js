@@ -3,7 +3,10 @@ import { Module } from '../module.js';
 export class CoarseModule extends Module {
   constructor() {
     super('coarse', 'Coarse', {
-      inputs: [{ name: 'in', type: 'audio', label: 'in' }],
+      inputs: [
+        { name: 'in', type: 'audio', label: 'in' },
+        { name: 'mod', type: 'control', label: 'mod' }
+      ],
       outputs: [{ name: 'out', type: 'audio', label: 'out' }]
     });
   }
@@ -14,8 +17,9 @@ export class CoarseModule extends Module {
     return div;
   }
 
-  compile(inputCode) {
+  compile(inputCode, modCode) {
     if (!inputCode) return null;
-    return `${inputCode}.coarse(${Math.round(this.knobs.factor.value)})`;
+    const factor = modCode || Math.round(this.knobs.factor.value);
+    return `${inputCode}.coarse(${factor})`;
   }
 }
