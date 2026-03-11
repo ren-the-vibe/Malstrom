@@ -1,0 +1,26 @@
+setGainCurve(x => Math.pow(x,2))
+samples('github:switchangel/breaks')
+samples('github:switchangel/pad')
+samples('github:tidalcycles/uzu-drumkit')
+setcps(170/60/4)
+const amen_slow = s("breaks/4").fit()
+  .scrub(irand(16).div(16).seg(8))
+  .rib("<256 128 24 0>/<4 3 2 1>!<1 2 3 4>",1)
+  .n("0 | 1 | 2 | 3 | 4 ")
+  .almostNever(ply("2 | 4 | 6 | 8"))
+  .orbit(2).distort("2.25:.75").room(.25).roomsize(2)
+  .duck("4:3:2").duckattack(irand(50).div(100)).duckdepth(irand(40).div(100))
+const amen = s("breaks/2").fit()
+  .scrub(irand(16).div(16).seg(8))
+  .rib("<0 24 128 256>/<1 2 3 4>!<4 3 2 1>",1)
+  .n("0 | 1 | 2 | 3 | 4 ")
+  .almostNever(ply("2 | 4 | 6 | 8"))
+  .orbit(2).distort("2:.5").room(.25).roomsize(2)
+  .duck("2:3:4").duckattack(irand(50).div(100)).duckdepth(irand(40).div(100))
+const hats = s("white!8").gain(slider("hatsLevel", 0.0, 5, 0.1,0.1)).decay(.08)
+  .almostNever(ply("2 | 4 | 6 | 8")).orbit(2)
+stack(
+  //amen,
+  //amen_slow,
+  hats
+)
