@@ -8,8 +8,9 @@ export class Compiler {
 
   compile() {
     // Find all terminal modules (Output, MIDI Out, OSC Out) — these are our roots
+    const terminalTypes = ['output', 'midi-out', 'osc-out', 'piano-roll', 'scope', 'spectrum', 'spiral', 'punchcard', 'wordfall', 'pitchwheel'];
     const terminals = this.rack.getAllModules().filter(
-      m => m.type === 'output' || m.type === 'midi-out' || m.type === 'osc-out'
+      m => terminalTypes.includes(m.type)
     );
 
     if (terminals.length === 0) return '';
@@ -29,8 +30,8 @@ export class Compiler {
 
     const moduleType = module.type;
 
-    // Multi-input modules (stack, cat, choose, merge)
-    if (this._isMultiInput(moduleType)) {
+    // Multi-input modules (stack, cat, choose, merge, slowcat, etc.)
+    if (this._isMultiInput(module)) {
       return this._compileMultiInput(module, visited);
     }
 
@@ -105,8 +106,10 @@ export class Compiler {
     return module.compile(inputCode, modCode);
   }
 
-  _isMultiInput(type) {
-    return ['stack', 'cat', 'choose', 'merge'].includes(type);
+  _isMultiInput(module) {
+    // Check module flag first (factory-generated modules), then hardcoded list
+    if (module.isMultiInput) return true;
+    return ['stack', 'cat', 'choose', 'merge'].includes(module.type);
   }
 
   _hasModInput(module) {

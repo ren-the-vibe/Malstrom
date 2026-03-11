@@ -243,6 +243,12 @@ body {
 .cat-io .dot { background: #94a3b8; }
 .cat-viz .dot { background: #06b6d4; }
 .cat-utility .dot { background: #78716c; }
+.cat-combinator .dot { background: #8b5cf6; }
+.cat-math .dot { background: #10b981; }
+.cat-musical .dot { background: #f43f5e; }
+.cat-misc .dot { background: #64748b; }
+.cat-zzfx .dot { background: #d946ef; }
+.cat-midi .dot { background: #0ea5e9; }
 
 /* === Rack Area === */
 #rack-container {
