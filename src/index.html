@@ -24,6 +24,7 @@
       </div>
     </div>
     <div class="transport-right">
+      <button id="btn-add-channel" class="transport-btn" title="Add Channel">+ Channel</button>
       <button id="btn-samples" class="transport-btn" title="Browse Samples">Samples</button>
       <button id="btn-init-audio" class="transport-btn accent" title="Initialize Audio">Start Audio</button>
       <span id="audio-status" class="status-dot off"></span>
@@ -40,7 +41,9 @@
 
     <!-- Rack Area -->
     <div id="rack-container">
-      <div id="rack"></div>
+      <div id="rack">
+        <!-- Channels and main channel are built by Rack.js -->
+      </div>
       <!-- SVG Cable Overlay -->
       <svg id="cables" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>

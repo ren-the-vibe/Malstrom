@@ -77,6 +77,7 @@ import { RandModule } from './rand.js';
 import { SignalModule } from './signal.js';
 import { StructModule } from './struct.js';
 import { MaskModule } from './mask.js';
+import { CodeModule } from './code.js';
 
 export const MODULE_CATEGORIES = [
   {
@@ -223,6 +224,7 @@ export const MODULE_CATEGORIES = [
       { type: 'merge', label: 'Merge', create: () => new MergeModule() },
       { type: 'rib', label: 'Ribbon', create: () => new RibModule() },
       { type: 'speed', label: 'Speed', create: () => new SpeedModule() },
+      { type: 'code', label: 'Code', create: () => new CodeModule() },
     ]
   }
 ];
@@ -466,6 +468,7 @@ const MODULE_DESCS = {
   merge: 'Merge multiple audio signals',
   rib: 'Ribbon controller input',
   speed: 'Sample playback speed',
+  code: 'Raw strudel code passthrough — type any valid strudel expression',
   // Musical
   scale: 'Quantize notes to a musical scale',
   transpose: 'Transpose notes by semitones',

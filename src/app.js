@@ -6,6 +6,7 @@ import { Compiler } from './compiler.js';
 import { Engine } from './engine.js';
 import { MODULE_CATEGORIES, createModule } from './modules/index.js';
 import { loadedPacks } from './modules/sampler.js';
+import { parseStrudel, methodToModuleType } from './parser.js';
 
 const ALTERNET_URL = 'https://strudel-samples.alternet.site';
 
@@ -40,6 +41,11 @@ class App {
     this.rack.onModuleRemoved = (module) => {
       window.__malstromModules?.delete(module.id);
       this.cables.removeModuleConnections(module.id);
+      this._recompile();
+    };
+
+    // Wire up channel changes to recompile
+    this.rack.onChannelChange = () => {
       this._recompile();
     };
 
@@ -91,7 +97,7 @@ class App {
       const code = this._recompile();
 
       if (!code) {
-        compiledCodeEl.textContent = 'Nothing to play — connect modules to an Output';
+        compiledCodeEl.textContent = 'Nothing to play — add modules to a channel';
         compiledCodeEl.classList.add('error');
         return;
       }
@@ -128,6 +134,13 @@ class App {
     bpmInput.addEventListener('change', () => {
       const bpm = parseInt(bpmInput.value, 10);
       if (bpm >= 20 && bpm <= 300) this.engine.setBpm(bpm);
+    });
+
+    // Channel controls
+    document.getElementById('btn-add-channel')?.addEventListener('click', () => {
+      const channels = this.rack.getChannels();
+      const name = `track${channels.length + 1}`;
+      this.rack.addChannel(name);
     });
 
     // Save / Load
@@ -230,12 +243,22 @@ class App {
     }
   }
 
-  _addModule(type) {
+  _addModule(type, channelId = null) {
     const module = createModule(type);
     if (!module) return;
     module.onChange = () => this._recompile();
     module._onDragEnd = () => this.cables.refreshPositions();
-    this.rack.addModule(module);
+    this.rack.addModule(module, channelId);
+    requestAnimationFrame(() => this.cables.refreshPositions());
+    return module;
+  }
+
+  _addModuleToMain(type) {
+    const module = createModule(type);
+    if (!module) return;
+    module.onChange = () => this._recompile();
+    module._onDragEnd = () => this.cables.refreshPositions();
+    this.rack.addModuleToMain(module);
     requestAnimationFrame(() => this.cables.refreshPositions());
     return module;
   }
@@ -302,7 +325,8 @@ class App {
       to: { moduleId: c.to.moduleId, jackName: c.to.jackName }
     }));
     const sampleImports = this.engine.getSampleImports();
-    return { modules, connections, sampleImports };
+    const rackState = this.rack.getProjectState();
+    return { modules, connections, sampleImports, ...rackState };
   }
 
   async _saveProject() {
@@ -365,9 +389,72 @@ class App {
       this._refreshImportList();
     }
 
-    // Rebuild with ID mapping
+    // Restore channels if present (new format)
+    if (result.state.channels) {
+      this._loadProjectWithChannels(result.state);
+    } else {
+      // Legacy format: all modules in one channel
+      this._loadProjectLegacy(result.state);
+    }
+  }
+
+  _loadProjectWithChannels(state) {
     const idMap = {};
-    for (const modConfig of result.state.modules) {
+
+    // Recreate channels
+    for (const chConfig of state.channels) {
+      const channel = this.rack.addChannel(chConfig.name);
+      channel.restoreConfig(chConfig);
+
+      // Create modules for this channel
+      for (const modId of chConfig.moduleIds) {
+        const modConfig = state.modules.find(m => m.id === modId);
+        if (!modConfig) continue;
+
+        const module = createModule(modConfig.type);
+        if (!module) {
+          console.warn('[Malstrom] Unknown module type:', modConfig.type);
+          continue;
+        }
+        module.onChange = () => this._recompile();
+        module._onDragEnd = () => this.cables.refreshPositions();
+        this.rack.addModule(module, channel.id);
+        idMap[modConfig.id] = module.id;
+        module.restoreConfig(modConfig);
+      }
+    }
+
+    // Restore main channel global effects
+    if (state.mainChannel?.globalEffectModuleIds) {
+      for (const modId of state.mainChannel.globalEffectModuleIds) {
+        const modConfig = state.modules.find(m => m.id === modId);
+        if (!modConfig) continue;
+        const module = createModule(modConfig.type);
+        if (!module) continue;
+        module.onChange = () => this._recompile();
+        module._onDragEnd = () => this.cables.refreshPositions();
+        this.rack.addModuleToMain(module);
+        idMap[modConfig.id] = module.id;
+        module.restoreConfig(modConfig);
+      }
+    }
+
+    // Restore connections
+    requestAnimationFrame(() => {
+      for (const conn of state.connections) {
+        const fromId = idMap[conn.from.moduleId];
+        const toId = idMap[conn.to.moduleId];
+        if (!fromId || !toId) continue;
+        this.cables.addConnection(fromId, conn.from.jackName, toId, conn.to.jackName);
+      }
+      this._recompile();
+    });
+  }
+
+  _loadProjectLegacy(state) {
+    // Old format: load all modules into the first channel
+    const idMap = {};
+    for (const modConfig of state.modules) {
       const module = createModule(modConfig.type);
       if (!module) {
         console.warn('[Malstrom] Unknown module type:', modConfig.type);
@@ -382,7 +469,7 @@ class App {
 
     // Restore connections after DOM settles
     requestAnimationFrame(() => {
-      for (const conn of result.state.connections) {
+      for (const conn of state.connections) {
         const fromId = idMap[conn.from.moduleId];
         const toId = idMap[conn.to.moduleId];
         if (!fromId || !toId) continue;
@@ -392,20 +479,166 @@ class App {
     });
   }
 
+  // ── Strudel Import ──
+
   _handlePlainStrudel(code) {
     const compiledCodeEl = document.getElementById('compiled-code');
-    compiledCodeEl.textContent = "CAN'T PARSE THIS STRUDEL INTO MALSTROM — file contains raw strudel code without module configuration";
-    compiledCodeEl.classList.add('error');
 
+    let parsed;
+    try {
+      parsed = parseStrudel(code);
+    } catch (err) {
+      compiledCodeEl.textContent = `Parse error: ${err.message}`;
+      compiledCodeEl.classList.add('error');
+      return;
+    }
+
+    // Clear current state
+    this.rack.clear();
+
+    // Add sample imports
+    for (const imp of parsed.sampleImports) {
+      this.engine.addSampleImport(imp);
+    }
+    this._refreshImportList();
+
+    // Set BPM from cps
+    if (parsed.cps) {
+      const bpm = Math.round(parsed.cps * 60 * 4);
+      const bpmInput = document.getElementById('bpm');
+      if (bpmInput) bpmInput.value = bpm;
+      this.engine.setBpm(bpm);
+    }
+
+    // Create channels from tracks
+    for (const track of parsed.tracks) {
+      const channel = this.rack.addChannel(track.name);
+      let prevModule = null;
+
+      for (const method of track.chain) {
+        const module = this._createModuleFromMethod(method);
+        if (!module) continue;
+
+        module.onChange = () => this._recompile();
+        module._onDragEnd = () => this.cables.refreshPositions();
+        this.rack.addModule(module, channel.id);
+
+        // Auto-connect in chain: previous out → this in
+        if (prevModule && module.inputs.length > 0) {
+          requestAnimationFrame(() => {
+            this.cables.addConnection(prevModule.id, 'out', module.id, 'in');
+          });
+        }
+
+        // Handle mod input from complex args
+        if (method.modCode && module.inputs.some(i => i.name === 'mod')) {
+          const modModule = this._createCodeModule(method.modCode);
+          if (modModule) {
+            modModule.onChange = () => this._recompile();
+            modModule._onDragEnd = () => this.cables.refreshPositions();
+            this.rack.addModule(modModule, channel.id);
+            requestAnimationFrame(() => {
+              this.cables.addConnection(modModule.id, 'out', module.id, 'mod');
+            });
+          }
+        }
+
+        prevModule = module;
+      }
+    }
+
+    // Add preamble lines as Code modules in main channel if they contain meaningful code
+    for (const line of parsed.preamble) {
+      const mod = this._createCodeModule(line);
+      if (mod) {
+        mod.onChange = () => this._recompile();
+        this.rack.addModuleToMain(mod);
+      }
+    }
+
+    // Update UI
+    requestAnimationFrame(() => {
+      this.cables.refreshPositions();
+      this._recompile();
+    });
+
+    compiledCodeEl.textContent = `Imported: ${parsed.tracks.length} track(s), ${parsed.sampleImports.length} sample import(s)`;
+
+    // Show code preview
     const previewEl = document.getElementById('code-preview');
     if (previewEl) {
-      previewEl.textContent = '// Imported strudel code (cannot decompose into modules):\n' + code;
+      previewEl.textContent = '// Original strudel code:\n' + code;
     }
     const panel = document.getElementById('code-panel');
     if (panel) {
       panel.classList.remove('collapsed');
       const toggleBtn = document.getElementById('btn-toggle-code');
       if (toggleBtn) toggleBtn.innerHTML = 'Strudel Code &#9660;';
+    }
+  }
+
+  _createModuleFromMethod(method) {
+    // Try to match method name to a known module type
+    const moduleType = methodToModuleType(method.method);
+
+    if (moduleType) {
+      const module = createModule(moduleType);
+      if (module) {
+        // Try to set knob/select values from parsed args
+        this._applyMethodArgs(module, method);
+        return module;
+      }
+    }
+
+    // Fallback: create a Code module with the raw strudel text
+    return this._createCodeModule(method.raw);
+  }
+
+  _createCodeModule(codeText) {
+    if (!codeText || !codeText.trim()) return null;
+    const module = createModule('code');
+    if (!module) return null;
+    // Set the code text after render (restoreConfig will handle it)
+    module._pendingCode = codeText.trim();
+    const origRender = module.renderBody.bind(module);
+    module.renderBody = function() {
+      const el = origRender();
+      if (this._pendingCode && this.textInputs.code) {
+        this.textInputs.code.value = this._pendingCode;
+        delete this._pendingCode;
+      }
+      return el;
+    };
+    return module;
+  }
+
+  _applyMethodArgs(module, method) {
+    if (!method.args) return;
+    const args = method.args.trim();
+    if (!args) return;
+
+    // For simple numeric args, try to set the first knob
+    const numVal = parseFloat(args);
+    if (!isNaN(numVal)) {
+      const knobNames = Object.keys(module.knobs);
+      if (knobNames.length > 0) {
+        module.knobs[knobNames[0]].value = numVal;
+      }
+      return;
+    }
+
+    // For string args like "bd" or "sawtooth", try to set a select or text input
+    const strMatch = args.match(/^["'](.+?)["']$/);
+    if (strMatch) {
+      const val = strMatch[1];
+      const selectNames = Object.keys(module.selects);
+      if (selectNames.length > 0) {
+        module.selects[selectNames[0]].value = val;
+      }
+      const textNames = Object.keys(module.textInputs);
+      if (textNames.length > 0) {
+        module.textInputs[textNames[0]].value = val;
+      }
     }
   }
 

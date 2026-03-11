@@ -259,12 +259,166 @@ body {
 
 #rack {
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  padding: 16px;
-  gap: 12px;
+  flex-direction: column;
   min-height: 100%;
   position: relative;
+}
+
+#channels {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* === Channel Strips === */
+.channel {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  min-height: 140px;
+  transition: opacity 0.2s;
+}
+
+.channel.selected {
+  background: rgba(0, 212, 255, 0.03);
+}
+
+.channel.muted {
+  opacity: 0.45;
+}
+
+.channel.solo-muted {
+  opacity: 0.3;
+}
+
+.channel-header {
+  width: 100px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background: var(--bg-light);
+  border-right: 1px solid var(--border);
+  gap: 6px;
+}
+
+.channel-name {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  padding: 2px 0;
+  width: 100%;
+}
+
+.channel-name:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+.channel-btn-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.channel-btn {
+  background: var(--bg-module);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.channel-btn:hover {
+  background: var(--bg-module-header);
+}
+
+.channel-btn.mute-btn.active {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.channel-btn.solo-btn.active {
+  background: #f59e0b;
+  color: var(--bg);
+  border-color: #f59e0b;
+}
+
+.channel-btn.delete-btn {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.channel-btn.delete-btn:hover {
+  color: var(--danger);
+}
+
+.channel-modules {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 10px;
+  flex: 1;
+  align-items: flex-start;
+}
+
+.channel-hint {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+/* Main Channel */
+.channel.main-channel {
+  border-top: 2px solid var(--accent);
+  border-bottom: none;
+  min-height: 100px;
+  background: rgba(0, 212, 255, 0.02);
+}
+
+.main-header {
+  background: linear-gradient(180deg, rgba(0, 212, 255, 0.08), var(--bg-light));
+}
+
+.main-label {
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent);
+  font-size: 11px;
+  border: none;
+  background: transparent;
+}
+
+.main-effects {
+  min-height: 80px;
+}
+
+.main-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 80px;
+  color: var(--text-dim);
+  font-size: 11px;
+  opacity: 0.4;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  margin: 4px;
 }
 
 #cables {
