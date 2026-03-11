@@ -196,7 +196,7 @@ export class Rack {
     }
   }
 
-  clear() {
+  clear(skipDefaultChannel = false) {
     // Remove all modules
     for (const id of [...this.modules.keys()]) {
       const module = this.modules.get(id);
@@ -220,8 +220,10 @@ export class Rack {
       this.mainChannel._globalEffectsEl.appendChild(ph);
     }
 
-    // Add default channel
-    this.addChannel('track1');
+    // Add default channel unless caller will add their own
+    if (!skipDefaultChannel) {
+      this.addChannel('track1');
+    }
   }
 
   // Serialization

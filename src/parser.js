@@ -72,6 +72,15 @@ function getMethodMap() {
   _methodMap.set('release', 'release');
   _methodMap.set('orbit', 'output');
   _methodMap.set('cutoff', 'filter');
+  _methodMap.set('almostNever', 'probability');
+  _methodMap.set('rarely', 'probability');
+  _methodMap.set('often', 'probability');
+  _methodMap.set('almostAlways', 'probability');
+  _methodMap.set('sometimes', 'probability');
+  _methodMap.set('rib', 'rib');
+  _methodMap.set('ribbon', 'rib');
+  _methodMap.set('sidechain', 'duck');
+  _methodMap.set('distort', 'distortion');
 
   return _methodMap;
 }

@@ -493,8 +493,8 @@ class App {
       return;
     }
 
-    // Clear current state
-    this.rack.clear();
+    // Clear current state (skip default channel since we'll create our own)
+    this.rack.clear(true);
 
     // Add sample imports
     for (const imp of parsed.sampleImports) {
@@ -511,6 +511,9 @@ class App {
     }
 
     // Create channels from tracks
+    // Collect all cable connections to add after DOM settles
+    const pendingCables = [];
+
     for (const track of parsed.tracks) {
       const channel = this.rack.addChannel(track.name);
       let prevModule = null;
@@ -521,25 +524,39 @@ class App {
 
         module.onChange = () => this._recompile();
         module._onDragEnd = () => this.cables.refreshPositions();
+        // addModule calls render(), which populates knobs/selects/textInputs
         this.rack.addModule(module, channel.id);
+
+        // Now apply parsed args (after render so knobs/selects exist)
+        this._applyMethodArgs(module, method);
+
+        // Apply pending code for Code modules (after render)
+        if (module._pendingCode && module.textInputs.code) {
+          module.textInputs.code.value = module._pendingCode;
+          delete module._pendingCode;
+        }
 
         // Auto-connect in chain: previous out → this in
         if (prevModule && module.inputs.length > 0) {
-          requestAnimationFrame(() => {
-            this.cables.addConnection(prevModule.id, 'out', module.id, 'in');
-          });
+          pendingCables.push({ from: prevModule.id, fromJack: 'out', to: module.id, toJack: 'in' });
         }
 
-        // Handle mod input from complex args
-        if (method.modCode && module.inputs.some(i => i.name === 'mod')) {
-          const modModule = this._createCodeModule(method.modCode);
-          if (modModule) {
-            modModule.onChange = () => this._recompile();
-            modModule._onDragEnd = () => this.cables.refreshPositions();
-            this.rack.addModule(modModule, channel.id);
-            requestAnimationFrame(() => {
-              this.cables.addConnection(modModule.id, 'out', module.id, 'mod');
-            });
+        // Handle mod/effect input from complex args
+        if (method.modCode) {
+          const modJack = module.inputs.find(i => i.name === 'mod' || i.name === 'effect' || i.name === 'cutoffMod');
+          if (modJack) {
+            const modModule = this._createCodeModule(method.modCode);
+            if (modModule) {
+              modModule.onChange = () => this._recompile();
+              modModule._onDragEnd = () => this.cables.refreshPositions();
+              this.rack.addModule(modModule, channel.id);
+              // Apply code text after render
+              if (modModule._pendingCode && modModule.textInputs.code) {
+                modModule.textInputs.code.value = modModule._pendingCode;
+                delete modModule._pendingCode;
+              }
+              pendingCables.push({ from: modModule.id, fromJack: 'out', to: module.id, toJack: modJack.name });
+            }
           }
         }
 
@@ -553,11 +570,19 @@ class App {
       if (mod) {
         mod.onChange = () => this._recompile();
         this.rack.addModuleToMain(mod);
+        // Apply code text after render
+        if (mod._pendingCode && mod.textInputs.code) {
+          mod.textInputs.code.value = mod._pendingCode;
+          delete mod._pendingCode;
+        }
       }
     }
 
-    // Update UI
+    // Add all cable connections after DOM settles
     requestAnimationFrame(() => {
+      for (const cable of pendingCables) {
+        this.cables.addConnection(cable.from, cable.fromJack, cable.to, cable.toJack);
+      }
       this.cables.refreshPositions();
       this._recompile();
     });
@@ -578,14 +603,28 @@ class App {
   }
 
   _createModuleFromMethod(method) {
+    // For source functions like s(), check if args are a complex pattern
+    // that won't fit in a Sampler module's dropdown
+    if ((method.method === 's' || method.method === 'sound') && method.args) {
+      const strMatch = method.args.trim().match(/^["'](.+?)["']$/);
+      if (strMatch) {
+        const val = strMatch[1];
+        // Check if it's a known sample name (simple one-word like "bd", "sd")
+        const isSimpleSample = /^[a-z]+\d*$/.test(val) && !val.includes('/');
+        if (!isSimpleSample) {
+          // Complex pattern like "breaks/4" or "bd sd hh" — use Code module
+          return this._createCodeModule(method.raw);
+        }
+      }
+    }
+
     // Try to match method name to a known module type
     const moduleType = methodToModuleType(method.method);
 
     if (moduleType) {
       const module = createModule(moduleType);
       if (module) {
-        // Try to set knob/select values from parsed args
-        this._applyMethodArgs(module, method);
+        // Args will be applied after render in _handlePlainStrudel
         return module;
       }
     }
@@ -598,24 +637,58 @@ class App {
     if (!codeText || !codeText.trim()) return null;
     const module = createModule('code');
     if (!module) return null;
-    // Set the code text after render (restoreConfig will handle it)
+    // Store pending code — will be applied after render in _handlePlainStrudel
     module._pendingCode = codeText.trim();
-    const origRender = module.renderBody.bind(module);
-    module.renderBody = function() {
-      const el = origRender();
-      if (this._pendingCode && this.textInputs.code) {
-        this.textInputs.code.value = this._pendingCode;
-        delete this._pendingCode;
-      }
-      return el;
-    };
     return module;
   }
 
   _applyMethodArgs(module, method) {
+    // Probability module: set mode from method name (almostNever, rarely, etc.)
+    // Must happen before the early-return on empty args
+    if (module.type === 'probability' && module.selects.mode) {
+      const modes = Array.from(module.selects.mode.options).map(o => o.value);
+      if (modes.includes(method.method)) {
+        module.selects.mode.value = method.method;
+      }
+    }
+
     if (!method.args) return;
     const args = method.args.trim();
     if (!args) return;
+
+    // Special handling for Sampler module: set bank + sample from the pattern
+    if (module.type === 'sampler') {
+      const strMatch = args.match(/^["']([a-z]+\d*)["']$/);
+      if (strMatch && module.selects.sample) {
+        const sampleName = strMatch[1];
+        // Find which bank contains this sample
+        for (const opt of module.selects.bank.options) {
+          // Temporarily select bank and check if sample is available
+          module.selects.bank.value = opt.value;
+          module.selects.bank.dispatchEvent(new Event('change'));
+          // Check if sampleName is in the now-updated sample list
+          const sampleOpts = Array.from(module.selects.sample.options).map(o => o.value);
+          if (sampleOpts.includes(sampleName)) {
+            module.selects.sample.value = sampleName;
+            return;
+          }
+        }
+        // If not found, reset to drums/bd
+        module.selects.bank.value = 'drums';
+        module.selects.bank.dispatchEvent(new Event('change'));
+        module.selects.sample.value = 'bd';
+      }
+      return;
+    }
+
+    // Special handling for Sequence module: set the pattern text
+    if (module.type === 'sequence') {
+      const strMatch = args.match(/^["'](.+?)["']$/);
+      if (strMatch && module.textInputs.pattern) {
+        module.textInputs.pattern.value = strMatch[1];
+      }
+      return;
+    }
 
     // For simple numeric args, try to set the first knob
     const numVal = parseFloat(args);
@@ -627,14 +700,21 @@ class App {
       return;
     }
 
-    // For string args like "bd" or "sawtooth", try to set a select or text input
+    // For string args like "sawtooth", try to set a select or text input
     const strMatch = args.match(/^["'](.+?)["']$/);
     if (strMatch) {
       const val = strMatch[1];
+      // Try selects first
       const selectNames = Object.keys(module.selects);
-      if (selectNames.length > 0) {
-        module.selects[selectNames[0]].value = val;
+      for (const name of selectNames) {
+        const opts = Array.from(module.selects[name].options).map(o => o.value);
+        if (opts.includes(val)) {
+          module.selects[name].value = val;
+          module.selects[name].dispatchEvent(new Event('change'));
+          return;
+        }
       }
+      // Try text inputs
       const textNames = Object.keys(module.textInputs);
       if (textNames.length > 0) {
         module.textInputs[textNames[0]].value = val;
