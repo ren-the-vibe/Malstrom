@@ -21,10 +21,10 @@ export class OutputModule extends Module {
   compile(inputCode) {
     if (!inputCode) return null;
     const orbit = Math.round(this.knobs.orbit.value);
-    const gain = this.knobs.gain.value;
+    const gain = parseFloat(this.knobs.gain.value.toFixed(4));
     let code = inputCode;
     if (orbit > 0) code += `.orbit(${orbit})`;
-    if (gain !== 0.8) code += `.gain(${gain})`;
+    if (Math.abs(gain - 0.8) > 0.001) code += `.gain(${gain})`;
     return code;
   }
 }

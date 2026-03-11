@@ -45,6 +45,9 @@ export class Module {
     header.appendChild(closeBtn);
     el.appendChild(header);
 
+    // Drag-to-reorder on header
+    this._initDrag(header, el);
+
     // Body
     const body = document.createElement('div');
     body.className = 'module-body';
@@ -118,6 +121,8 @@ export class Module {
     valueEl.className = 'knob-value';
 
     let value = defaultVal;
+    const clamp = () => { value = Math.min(max, Math.max(min, value)); };
+    const snap = () => { value = Math.round(value / step) * step; };
     const updateDisplay = () => {
       const normalized = (value - min) / (max - min);
       const angle = -135 + normalized * 270;
@@ -142,9 +147,8 @@ export class Module {
       const dy = startY - e.clientY;
       const range = max - min;
       const sensitivity = e.shiftKey ? 0.001 : 0.005;
-      value = Math.min(max, Math.max(min, startVal + dy * range * sensitivity));
-      if (step >= 1) value = Math.round(value / step) * step;
-      else value = Math.round(value / step) * step;
+      value = startVal + dy * range * sensitivity;
+      clamp(); snap();
       updateDisplay();
       if (this.onChange) this.onChange();
     });
@@ -158,6 +162,71 @@ export class Module {
       if (this.onChange) this.onChange();
     });
 
+    // Right-click on knob or label to edit range
+    const showRangeEditor = (e) => {
+      e.preventDefault();
+      if (locked) return;
+      // Remove any existing editor
+      container.querySelector('.knob-range-editor')?.remove();
+
+      const editor = document.createElement('div');
+      editor.className = 'knob-range-editor';
+
+      const minInput = document.createElement('input');
+      minInput.type = 'number';
+      minInput.value = min;
+      minInput.step = step;
+      minInput.placeholder = 'min';
+
+      const sep = document.createElement('span');
+      sep.textContent = '\u2013';
+      sep.style.color = 'var(--text-dim)';
+
+      const maxInput = document.createElement('input');
+      maxInput.type = 'number';
+      maxInput.value = max;
+      maxInput.step = step;
+      maxInput.placeholder = 'max';
+
+      editor.appendChild(minInput);
+      editor.appendChild(sep);
+      editor.appendChild(maxInput);
+      container.appendChild(editor);
+
+      minInput.focus();
+      minInput.select();
+
+      const applyRange = () => {
+        const newMin = parseFloat(minInput.value);
+        const newMax = parseFloat(maxInput.value);
+        if (!isNaN(newMin) && !isNaN(newMax) && newMin < newMax) {
+          min = newMin;
+          max = newMax;
+          clamp(); snap();
+          updateDisplay();
+          if (this.onChange) this.onChange();
+        }
+        editor.remove();
+      };
+
+      const onKey = (e) => {
+        if (e.key === 'Enter') applyRange();
+        if (e.key === 'Escape') editor.remove();
+      };
+      minInput.addEventListener('keydown', onKey);
+      maxInput.addEventListener('keydown', onKey);
+      // Close on outside click
+      setTimeout(() => {
+        const close = (e) => {
+          if (!editor.contains(e.target)) { applyRange(); document.removeEventListener('mousedown', close); }
+        };
+        document.addEventListener('mousedown', close);
+      }, 0);
+    };
+    knob.addEventListener('contextmenu', showRangeEditor);
+    labelEl.addEventListener('contextmenu', showRangeEditor);
+    valueEl.addEventListener('contextmenu', showRangeEditor);
+
     container.appendChild(knob);
     container.appendChild(labelEl);
     container.appendChild(valueEl);
@@ -166,7 +235,7 @@ export class Module {
       get value() { return value; },
       set value(v) {
         value = Math.min(max, Math.max(min, v));
-        if (step >= 1) value = Math.round(value / step) * step;
+        snap();
         updateDisplay();
       },
       lock() {
@@ -179,7 +248,9 @@ export class Module {
         container.classList.remove('mod-locked');
         updateDisplay();
       },
-      get isLocked() { return locked; }
+      get isLocked() { return locked; },
+      get min() { return min; },
+      get max() { return max; }
     };
     return container;
   }
@@ -256,6 +327,99 @@ export class Module {
     } else {
       this.knobs[knobName].unlock();
     }
+  }
+
+  _initDrag(handle, el) {
+    let dragging = false;
+    let ghost = null;
+    let placeholder = null;
+    let offsetX, offsetY;
+    let rackEl = null;
+
+    handle.addEventListener('mousedown', (e) => {
+      // Only left-click, and not on close button
+      if (e.button !== 0 || e.target.closest('.module-close')) return;
+      e.preventDefault();
+
+      rackEl = el.parentElement;
+      if (!rackEl) return;
+
+      const rect = el.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+
+      // Create placeholder to hold space in flow
+      placeholder = document.createElement('div');
+      placeholder.className = 'module-placeholder';
+      placeholder.style.width = rect.width + 'px';
+      placeholder.style.height = rect.height + 'px';
+      rackEl.insertBefore(placeholder, el);
+
+      // Make module a floating ghost
+      ghost = el;
+      ghost.classList.add('dragging');
+      ghost.style.position = 'fixed';
+      ghost.style.left = rect.left + 'px';
+      ghost.style.top = rect.top + 'px';
+      ghost.style.width = rect.width + 'px';
+      ghost.style.zIndex = '1000';
+
+      dragging = true;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging || !ghost) return;
+
+      ghost.style.left = (e.clientX - offsetX) + 'px';
+      ghost.style.top = (e.clientY - offsetY) + 'px';
+
+      // Find insertion point among siblings
+      const siblings = Array.from(rackEl.children).filter(
+        c => c !== ghost && c.classList.contains('module') || c === placeholder
+      );
+      let target = null;
+      for (const sib of siblings) {
+        if (sib === placeholder) continue;
+        const r = sib.getBoundingClientRect();
+        if (e.clientX < r.left + r.width / 2 && e.clientY < r.bottom) {
+          target = sib;
+          break;
+        }
+        if (e.clientY < r.top + r.height / 2) {
+          target = sib;
+          break;
+        }
+      }
+      // Move placeholder to target position
+      if (target) {
+        rackEl.insertBefore(placeholder, target);
+      } else {
+        rackEl.appendChild(placeholder);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!dragging || !ghost) return;
+      dragging = false;
+
+      // Restore module to flow at placeholder position
+      ghost.classList.remove('dragging');
+      ghost.style.position = '';
+      ghost.style.left = '';
+      ghost.style.top = '';
+      ghost.style.width = '';
+      ghost.style.zIndex = '';
+
+      if (placeholder && placeholder.parentElement) {
+        rackEl.insertBefore(ghost, placeholder);
+        placeholder.remove();
+      }
+      placeholder = null;
+      ghost = null;
+
+      // Refresh cable positions after reorder
+      if (this._onDragEnd) this._onDragEnd();
+    });
   }
 
   getJackPosition(jackName) {

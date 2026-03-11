@@ -233,6 +233,7 @@ class App {
     const module = createModule(type);
     if (!module) return;
     module.onChange = () => this._recompile();
+    module._onDragEnd = () => this.cables.refreshPositions();
     this.rack.addModule(module);
     requestAnimationFrame(() => this.cables.refreshPositions());
     return module;
@@ -372,6 +373,7 @@ class App {
         continue;
       }
       module.onChange = () => this._recompile();
+      module._onDragEnd = () => this.cables.refreshPositions();
       this.rack.addModule(module);
       idMap[modConfig.id] = module.id;
       module.restoreConfig(modConfig);
