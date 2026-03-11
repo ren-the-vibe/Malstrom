@@ -22,6 +22,8 @@ export class FilterModule extends Module {
     return div;
   }
 
+  get modKnobName() { return 'cutoff'; }
+
   compile(inputCode, modCode) {
     if (!inputCode) return null;
     const type = this.selects.type?.value || 'lowpass';

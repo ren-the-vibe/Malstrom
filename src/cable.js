@@ -113,11 +113,9 @@ export class CableManager {
       pathEl: this.dragging.pathEl
     };
 
-    // Enable click-to-delete on finalized cable
+    // Enable drag-to-reconnect on finalized cable
     conn.pathEl.classList.add('connected');
-    conn.pathEl.addEventListener('click', () => {
-      this.removeConnection(conn.id);
-    });
+    this._setupCableRedrag(conn);
 
     // Mark jacks as connected
     const fromJack = this.rackContainer.querySelector(
@@ -202,7 +200,7 @@ export class CableManager {
     };
 
     pathEl.classList.add('connected');
-    pathEl.addEventListener('click', () => this.removeConnection(conn.id));
+    this._setupCableRedrag(conn);
 
     fromJack.classList.add('connected');
     toJack.classList.add('connected');
@@ -235,6 +233,46 @@ export class CableManager {
       const y2 = toRect.top + toRect.height / 2 - containerRect.top + this.rackContainer.scrollTop;
       this._updatePath(conn.pathEl, x1, y1, x2, y2);
     }
+  }
+
+  _setupCableRedrag(conn) {
+    conn.pathEl.addEventListener('mousedown', (e) => {
+      if (this.dragging) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Get source jack position
+      const fromJack = this.rackContainer.querySelector(
+        `.jack[data-module-id="${conn.from.moduleId}"][data-jack-name="${conn.from.jackName}"]`
+      );
+      if (!fromJack) return;
+
+      const containerRect = this.rackContainer.getBoundingClientRect();
+      const fromRect = fromJack.getBoundingClientRect();
+      const startX = fromRect.left + fromRect.width / 2 - containerRect.left + this.rackContainer.scrollLeft;
+      const startY = fromRect.top + fromRect.height / 2 - containerRect.top + this.rackContainer.scrollTop;
+
+      // Detach destination end — remove connection but keep pathEl
+      const pathEl = conn.pathEl;
+      const idx = this.connections.findIndex(c => c.id === conn.id);
+      if (idx !== -1) this.connections.splice(idx, 1);
+
+      // Update jack connected states for the detached end
+      this._updateJackConnectedState(conn.to.moduleId, conn.to.jackName);
+      this._updateJackConnectedState(conn.from.moduleId, conn.from.jackName);
+
+      // Enter drag mode reusing the path
+      pathEl.classList.remove('connected');
+      pathEl.style.pointerEvents = 'none';
+
+      this.dragging = {
+        from: { moduleId: conn.from.moduleId, jackName: conn.from.jackName, type: fromJack.dataset.jackType },
+        startX, startY,
+        pathEl
+      };
+
+      if (this.onConnectionChange) this.onConnectionChange();
+    });
   }
 
   _updateJackConnectedState(moduleId, jackName) {

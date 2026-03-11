@@ -177,6 +177,26 @@ class App {
     }
   }
 
+  // ── Mod Lock ──
+
+  _updateModLocks() {
+    const allModules = this.rack.getAllModules();
+    for (const mod of allModules) {
+      // Check if this module has a 'mod' (or 'cutoffMod') input with a cable connected
+      const modInputNames = mod.inputs
+        .filter(i => i.name === 'mod' || i.name === 'cutoffMod')
+        .map(i => i.name);
+
+      const hasModCable = modInputNames.some(name =>
+        this.cables.getSourceModule(mod.id, name) !== null
+      );
+
+      if (mod.setModLocked) {
+        mod.setModLocked(hasModCable);
+      }
+    }
+  }
+
   // ── Palette ──
 
   _buildPalette(container) {
@@ -224,6 +244,17 @@ class App {
     compiledCodeEl.classList.remove('error');
     compiledCodeEl.textContent = code || '(no connections to output)';
     this._updateCodePreview(code);
+
+    // Live re-evaluation: if already playing, update the running pattern
+    if (this.engine.isPlaying() && code) {
+      this.engine.play(code).catch(err => {
+        console.warn('[Malstrom] Live update failed:', err.message);
+      });
+    }
+
+    // Update mod-locked knob states
+    this._updateModLocks();
+
     return code;
   }
 

@@ -121,8 +121,10 @@ export class Module {
 
     // Drag to adjust
     let dragging = false;
+    let locked = false;
     let startY, startVal;
     knob.addEventListener('mousedown', (e) => {
+      if (locked) return;
       dragging = true;
       startY = e.clientY;
       startVal = value;
@@ -143,6 +145,7 @@ export class Module {
 
     // Double-click to reset
     knob.addEventListener('dblclick', () => {
+      if (locked) return;
       value = defaultVal;
       updateDisplay();
       if (this.onChange) this.onChange();
@@ -158,7 +161,18 @@ export class Module {
         value = Math.min(max, Math.max(min, v));
         if (step >= 1) value = Math.round(value / step) * step;
         updateDisplay();
-      }
+      },
+      lock() {
+        locked = true;
+        container.classList.add('mod-locked');
+        valueEl.textContent = 'MOD';
+      },
+      unlock() {
+        locked = false;
+        container.classList.remove('mod-locked');
+        updateDisplay();
+      },
+      get isLocked() { return locked; }
     };
     return container;
   }
@@ -216,6 +230,24 @@ export class Module {
     }
     for (const [name, input] of Object.entries(this.textInputs)) {
       if (config[name] !== undefined) input.value = config[name];
+    }
+  }
+
+  // Lock/unlock the primary knob when a mod cable is connected/disconnected.
+  // Subclasses can override modKnobName to specify which knob is controlled by mod.
+  get modKnobName() {
+    // Default: first knob
+    const names = Object.keys(this.knobs);
+    return names.length > 0 ? names[0] : null;
+  }
+
+  setModLocked(locked) {
+    const knobName = this.modKnobName;
+    if (!knobName || !this.knobs[knobName]) return;
+    if (locked) {
+      this.knobs[knobName].lock();
+    } else {
+      this.knobs[knobName].unlock();
     }
   }
 
