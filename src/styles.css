@@ -413,7 +413,24 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
+
+.strudel-tag {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* New category colors */
+.cat-sample .dot { background: #f97316; }
+.cat-structure .dot { background: #14b8a6; }
 
 .module-close {
   background: none;

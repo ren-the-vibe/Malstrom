@@ -47,6 +47,36 @@ import { SpiralModule } from './spiral.js';
 import { OrbitModule } from './orbit.js';
 import { MergeModule } from './merge.js';
 
+// New modules
+import { PalindromeModule } from './palindrome.js';
+import { FitModule } from './fit.js';
+import { SegmentModule } from './segment.js';
+import { SwingModule } from './swing.js';
+import { RibModule } from './rib.js';
+import { LoopAtModule } from './loopat.js';
+import { ChopModule } from './chop.js';
+import { StriateModule } from './striate.js';
+import { PlyModule } from './ply.js';
+import { HurryModule } from './hurry.js';
+import { IterModule } from './iter.js';
+import { SpeedModule } from './speed-mod.js';
+import { DjfModule } from './djf.js';
+import { SquizModule } from './squiz.js';
+import { ScrubModule } from './scrub.js';
+import { EchoModule } from './echo-mod.js';
+import { LeslieModule } from './leslie.js';
+import { DuckModule } from './duck.js';
+import { EveryModule } from './every.js';
+import { OffModule } from './off.js';
+import { JuxModule } from './jux.js';
+import { LayerModule } from './layer.js';
+import { RarelyModule } from './rarely.js';
+import { SliceModule } from './slice.js';
+import { RandModule } from './rand.js';
+import { SignalModule } from './signal.js';
+import { StructModule } from './struct.js';
+import { MaskModule } from './mask.js';
+
 export const MODULE_CATEGORIES = [
   {
     name: 'Pattern',
@@ -61,6 +91,18 @@ export const MODULE_CATEGORIES = [
     ]
   },
   {
+    name: 'Sample',
+    cssClass: 'cat-sample',
+    modules: [
+      { type: 'chop', label: 'Chop', create: () => new ChopModule() },
+      { type: 'striate', label: 'Granular', create: () => new StriateModule() },
+      { type: 'slice', label: 'Slice', create: () => new SliceModule() },
+      { type: 'loopat', label: 'Loop At', create: () => new LoopAtModule() },
+      { type: 'fit', label: 'Fit', create: () => new FitModule() },
+      { type: 'scrub', label: 'Scrub', create: () => new ScrubModule() },
+    ]
+  },
+  {
     name: 'Time',
     cssClass: 'cat-time',
     modules: [
@@ -68,6 +110,12 @@ export const MODULE_CATEGORIES = [
       { type: 'fast', label: 'Fast', create: () => new FastModule() },
       { type: 'rev', label: 'Reverse', create: () => new RevModule() },
       { type: 'zoom', label: 'Zoom', create: () => new ZoomModule() },
+      { type: 'palindrome', label: 'Palindrome', create: () => new PalindromeModule() },
+      { type: 'iter', label: 'Rotate', create: () => new IterModule() },
+      { type: 'ply', label: 'Multiply', create: () => new PlyModule() },
+      { type: 'hurry', label: 'Hurry', create: () => new HurryModule() },
+      { type: 'off', label: 'Offset', create: () => new OffModule() },
+      { type: 'swing', label: 'Swing', create: () => new SwingModule() },
     ]
   },
   {
@@ -77,6 +125,9 @@ export const MODULE_CATEGORIES = [
       { type: 'sometimes', label: 'Sometimes', create: () => new SometimesModule() },
       { type: 'degrade', label: 'Degrade', create: () => new DegradeModule() },
       { type: 'choose', label: 'Choose', create: () => new ChooseModule() },
+      { type: 'every', label: 'Every N', create: () => new EveryModule() },
+      { type: 'probability', label: 'Probability', create: () => new RarelyModule() },
+      { type: 'rand', label: 'Random', create: () => new RandModule() },
     ]
   },
   {
@@ -87,6 +138,19 @@ export const MODULE_CATEGORIES = [
       { type: 'noise', label: 'Noise', create: () => new NoiseModule() },
       { type: 'sampler', label: 'Sampler', create: () => new SamplerModule() },
       { type: 'wavetable', label: 'Wavetable', create: () => new WavetableModule() },
+      { type: 'signal', label: 'Signal', create: () => new SignalModule() },
+    ]
+  },
+  {
+    name: 'Structure',
+    cssClass: 'cat-structure',
+    modules: [
+      { type: 'struct', label: 'Rhythmic Gate', create: () => new StructModule() },
+      { type: 'mask', label: 'Mask', create: () => new MaskModule() },
+      { type: 'segment', label: 'Quantize', create: () => new SegmentModule() },
+      { type: 'jux', label: 'Stereo Split', create: () => new JuxModule() },
+      { type: 'echo', label: 'Echo', create: () => new EchoModule() },
+      { type: 'layer', label: 'Layer', create: () => new LayerModule() },
     ]
   },
   {
@@ -116,6 +180,10 @@ export const MODULE_CATEGORIES = [
       { type: 'pan', label: 'Pan', create: () => new PanModule() },
       { type: 'compressor', label: 'Compressor', create: () => new CompressorModule() },
       { type: 'gain', label: 'Gain', create: () => new GainModule() },
+      { type: 'leslie', label: 'Leslie', create: () => new LeslieModule() },
+      { type: 'djf', label: 'DJ Filter', create: () => new DjfModule() },
+      { type: 'squiz', label: 'Squiz', create: () => new SquizModule() },
+      { type: 'duck', label: 'Sidechain', create: () => new DuckModule() },
     ]
   },
   {
@@ -152,6 +220,8 @@ export const MODULE_CATEGORIES = [
     modules: [
       { type: 'orbit', label: 'Orbit', create: () => new OrbitModule() },
       { type: 'merge', label: 'Merge', create: () => new MergeModule() },
+      { type: 'rib', label: 'Ribbon', create: () => new RibModule() },
+      { type: 'speed', label: 'Speed', create: () => new SpeedModule() },
     ]
   }
 ];

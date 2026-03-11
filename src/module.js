@@ -7,6 +7,7 @@ export class Module {
     this.id = `mod-${++moduleIdCounter}`;
     this.type = type;
     this.title = title;
+    this.strudelName = options.strudelName || null;
     this.inputs = options.inputs || [];   // [{name, type: 'audio'|'pattern'|'control', label}]
     this.outputs = options.outputs || []; // [{name, type, label}]
     this.knobs = {};
@@ -34,6 +35,12 @@ export class Module {
     closeBtn.className = 'module-close';
     closeBtn.innerHTML = '&times;';
     closeBtn.onclick = () => { if (this.onRemove) this.onRemove(this); };
+    if (this.strudelName) {
+      const tag = document.createElement('span');
+      tag.className = 'strudel-tag';
+      tag.textContent = `.${this.strudelName}()`;
+      titleEl.appendChild(tag);
+    }
     header.appendChild(titleEl);
     header.appendChild(closeBtn);
     el.appendChild(header);
