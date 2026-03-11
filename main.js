@@ -63,39 +63,42 @@ ipcMain.handle('load-project', async () => {
   if (canceled || filePaths.length === 0) return { canceled: true };
 
   const content = fs.readFileSync(filePaths[0], 'utf8');
-  const sepIndex = content.indexOf('\n---\n');
+
+  // Try to parse as JSON/YAML project state
   let state, code;
+
+  // First attempt: look for YAML frontmatter with --- separator
+  const sepIndex = content.indexOf('\n---\n');
   if (sepIndex !== -1) {
     const headerStr = content.substring(0, sepIndex);
     code = content.substring(sepIndex + 5);
     try {
-      if (yaml) {
-        state = yaml.load(headerStr);
-      } else {
-        state = JSON.parse(headerStr);
-      }
+      state = yaml ? yaml.load(headerStr) : JSON.parse(headerStr);
     } catch (e) {
-      // Header didn't parse — treat entire file as plain strudel code
-      return { canceled: false, plainStrudel: true, code: content, filePath: filePaths[0] };
+      console.error('[Malstrom] Failed to parse header before ---:', e.message);
+      state = null;
     }
-  } else {
-    // No separator — try to parse as state (YAML/JSON), fall back to plain strudel
+  }
+
+  // Second attempt: try parsing the whole file as JSON/YAML (no separator)
+  if (!state || !Array.isArray(state.modules)) {
     try {
-      if (yaml) {
-        state = yaml.load(content);
-      } else {
-        state = JSON.parse(content);
-      }
-      // Must have a modules array to be a valid project
-      if (!state || !Array.isArray(state.modules)) {
-        return { canceled: false, plainStrudel: true, code: content, filePath: filePaths[0] };
-      }
+      state = yaml ? yaml.load(content) : JSON.parse(content);
+      code = '';
     } catch (e) {
       // Not valid YAML/JSON — treat as plain strudel code
+      console.log('[Malstrom] File is not JSON/YAML, treating as plain strudel');
       return { canceled: false, plainStrudel: true, code: content, filePath: filePaths[0] };
     }
-    code = '';
   }
+
+  // Validate that state has a modules array
+  if (!state || !Array.isArray(state.modules)) {
+    console.log('[Malstrom] Parsed state has no modules array, treating as plain strudel');
+    return { canceled: false, plainStrudel: true, code: content, filePath: filePaths[0] };
+  }
+
+  console.log('[Malstrom] Loaded project with', state.modules.length, 'modules');
   return { canceled: false, state, code, filePath: filePaths[0] };
 });
 

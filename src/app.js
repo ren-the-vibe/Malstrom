@@ -295,7 +295,17 @@ class App {
       compiledCodeEl.classList.add('error');
       return;
     }
-    const result = await window.malstrom.loadProject();
+
+    let result;
+    try {
+      result = await window.malstrom.loadProject();
+    } catch (err) {
+      console.error('[Malstrom] loadProject IPC error:', err);
+      const compiledCodeEl = document.getElementById('compiled-code');
+      compiledCodeEl.textContent = `Load error: ${err.message}`;
+      compiledCodeEl.classList.add('error');
+      return;
+    }
     if (result.canceled) return;
 
     // Stop playback
@@ -308,6 +318,8 @@ class App {
       this._handlePlainStrudel(result.code);
       return;
     }
+
+    console.log('[Malstrom] Restoring project:', result.state.modules?.length, 'modules,', result.state.connections?.length, 'connections');
 
     // Clear current state
     this.rack.clear();
@@ -324,7 +336,10 @@ class App {
     const idMap = {};
     for (const modConfig of result.state.modules) {
       const module = createModule(modConfig.type);
-      if (!module) continue;
+      if (!module) {
+        console.warn('[Malstrom] Unknown module type:', modConfig.type);
+        continue;
+      }
       module.onChange = () => this._recompile();
       this.rack.addModule(module);
       idMap[modConfig.id] = module.id;
