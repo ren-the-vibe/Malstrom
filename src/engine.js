@@ -6,7 +6,7 @@ export class Engine {
     this.playing = false;
     this._strudel = null;   // module-level exports (evaluate, hush, initStrudel, samples)
     this._repl = null;      // repl object returned by initStrudel (has setcps, setCps)
-    this._useCdnSamples = false;
+    this._sampleImports = new Set(); // e.g. "samples('github:user/repo')"
   }
 
   async init() {
@@ -33,10 +33,11 @@ export class Engine {
       throw new Error('No code to evaluate — connect modules to an Output');
     }
 
-    // Prepend CDN samples loader if needed
+    // Prepend sample pack imports
     let fullCode = code;
-    if (this._useCdnSamples) {
-      fullCode = `await samples('github:tidalcycles/Dirt-Samples')\n${code}`;
+    if (this._sampleImports.size > 0) {
+      const imports = [...this._sampleImports].map(s => `await ${s}`).join('\n');
+      fullCode = imports + '\n' + code;
     }
 
     await this._strudel.evaluate(fullCode);
@@ -61,8 +62,12 @@ export class Engine {
     }
   }
 
-  enableCdnSamples() {
-    this._useCdnSamples = true;
+  addSampleImport(importCode) {
+    this._sampleImports.add(importCode);
+  }
+
+  getSampleImports() {
+    return [...this._sampleImports];
   }
 
   async initAudio() {

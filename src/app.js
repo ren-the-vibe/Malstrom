@@ -7,7 +7,7 @@ import { Engine } from './engine.js';
 import { MODULE_CATEGORIES, createModule } from './modules/index.js';
 import { loadedPacks } from './modules/sampler.js';
 
-const SAMPLE_CDN_JSON = 'https://raw.githubusercontent.com/tidalcycles/Dirt-Samples/master/strudel.json';
+const ALTERNET_URL = 'https://strudel-samples.alternet.site';
 
 class App {
   constructor() {
@@ -278,144 +278,216 @@ class App {
   }
 
   // ── Sample Browser ──
+  // Fetches pack list from strudel-samples.alternet.site, lets user browse
+  // and load packs. Loading a pack adds samples('github:...') to the engine preamble.
 
   _initSampleBrowser() {
     const modal = document.getElementById('sample-browser-modal');
     const btnSamples = document.getElementById('btn-samples');
     if (!modal || !btnSamples) return;
 
-    const overlay = modal;
     const searchInput = modal.querySelector('.sb-search');
     const packList = modal.querySelector('.sb-pack-list');
-    const sampleList = modal.querySelector('.sb-sample-list');
-    const packTitle = modal.querySelector('.sb-pack-title');
-    const btnLoad = modal.querySelector('.sb-load-btn');
+    const detailPane = modal.querySelector('.sb-detail');
     const btnClose = modal.querySelector('.sb-close');
 
+    let packs = null; // [{name, count, builtin}]
     let selectedPack = null;
-    let currentAudio = null;
 
+    // Close modal
+    const closeModal = () => modal.classList.remove('visible');
+    btnClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    // Open modal and fetch pack list
     btnSamples.addEventListener('click', async () => {
       modal.classList.add('visible');
-      if (!this._sampleIndex) {
-        packList.innerHTML = '<div class="sb-loading">Loading sample index...</div>';
+      if (!packs) {
+        packList.innerHTML = '<div class="sb-loading">Loading packs from strudel-samples.alternet.site...</div>';
         try {
-          const resp = await fetch(SAMPLE_CDN_JSON);
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const data = await resp.json();
-          // Extract _base URL for sample audio preview
-          this._sampleBase = data._base || SAMPLE_CDN_JSON.replace(/strudel\.json$/, '');
-          // Filter out metadata keys
-          this._sampleIndex = {};
-          for (const [k, v] of Object.entries(data)) {
-            if (!k.startsWith('_')) this._sampleIndex[k] = v;
-          }
+          packs = await this._fetchPackList();
         } catch (err) {
-          packList.innerHTML = `<div class="sb-loading">Failed to load sample index: ${err.message}</div>`;
+          packList.innerHTML = `<div class="sb-loading">Failed to load packs: ${err.message}</div>`;
           return;
         }
       }
       renderPacks('');
     });
 
-    btnClose.addEventListener('click', () => {
-      modal.classList.remove('visible');
-      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    });
-
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        modal.classList.remove('visible');
-        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-      }
-    });
-
     searchInput?.addEventListener('input', () => renderPacks(searchInput.value));
 
     const renderPacks = (filter) => {
       packList.innerHTML = '';
-      if (!this._sampleIndex) return;
-      const names = Object.keys(this._sampleIndex)
-        .filter(n => !filter || n.toLowerCase().includes(filter.toLowerCase()))
-        .sort();
-      for (const name of names) {
+      if (!packs) return;
+      const filtered = packs.filter(p =>
+        !filter || p.name.toLowerCase().includes(filter.toLowerCase())
+      );
+      for (const pack of filtered) {
         const item = document.createElement('div');
         item.className = 'sb-pack-item';
-        item.textContent = name;
-        if (loadedPacks.has(name)) item.classList.add('loaded');
+        if (this.engine.getSampleImports().some(s => s.includes(pack.name))) {
+          item.classList.add('loaded');
+        }
+        if (pack.builtin) item.classList.add('builtin');
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'sb-pack-name';
+        nameEl.textContent = pack.name;
+        item.appendChild(nameEl);
+
+        const countEl = document.createElement('span');
+        countEl.className = 'sb-pack-count';
+        countEl.textContent = pack.count;
+        item.appendChild(countEl);
+
         item.addEventListener('click', () => {
           packList.querySelectorAll('.sb-pack-item').forEach(el => el.classList.remove('selected'));
           item.classList.add('selected');
-          selectedPack = name;
-          renderSamples(name);
+          selectedPack = pack;
+          renderDetail(pack);
         });
         packList.appendChild(item);
       }
     };
 
-    const renderSamples = (packName) => {
-      sampleList.innerHTML = '';
-      packTitle.textContent = packName;
-      const samples = this._sampleIndex[packName];
-      if (!samples) return;
+    const renderDetail = (pack) => {
+      const isBuiltin = pack.name.startsWith('strudel.cc/');
+      const importCode = isBuiltin ? null : this._getImportCode(pack.name);
+      const isLoaded = importCode && this.engine.getSampleImports().includes(importCode);
 
-      // samples can be an object (key -> array of URLs) or an array
-      const entries = typeof samples === 'object' && !Array.isArray(samples)
-        ? Object.entries(samples)
-        : [['samples', Array.isArray(samples) ? samples : [samples]]];
+      detailPane.innerHTML = '';
 
-      for (const [key, urls] of entries) {
-        const urlList = Array.isArray(urls) ? urls : [urls];
-        for (const url of urlList) {
-          const filename = typeof url === 'string' ? url.split('/').pop() : String(url);
-          const item = document.createElement('div');
-          item.className = 'sb-sample-item';
+      const title = document.createElement('h3');
+      title.className = 'sb-detail-title';
+      title.textContent = pack.name;
+      detailPane.appendChild(title);
 
-          const nameEl = document.createElement('span');
-          nameEl.textContent = key !== 'samples' ? `${key}: ${filename}` : filename;
-          item.appendChild(nameEl);
+      const meta = document.createElement('div');
+      meta.className = 'sb-detail-meta';
+      meta.textContent = `${pack.count} samples`;
+      detailPane.appendChild(meta);
 
-          const previewBtn = document.createElement('button');
-          previewBtn.className = 'sb-preview-btn';
-          previewBtn.textContent = '\u25B6';
-          previewBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-            const audioUrl = typeof url === 'string' && url.startsWith('http')
-              ? url
-              : `${this._sampleBase}${url}`;
-            currentAudio = new Audio(audioUrl);
-            currentAudio.play().catch(() => {});
-          });
-          item.appendChild(previewBtn);
-
-          sampleList.appendChild(item);
-        }
-      }
-    };
-
-    btnLoad?.addEventListener('click', () => {
-      if (!selectedPack || !this._sampleIndex[selectedPack]) return;
-
-      // Register pack with sampler modules
-      const samples = this._sampleIndex[selectedPack];
-      let sampleNames;
-      if (typeof samples === 'object' && !Array.isArray(samples)) {
-        sampleNames = Object.keys(samples);
+      // Strudel code block
+      const codeBlock = document.createElement('div');
+      codeBlock.className = 'sb-code-block';
+      const codeLabel = document.createElement('span');
+      codeLabel.className = 'sb-code-label';
+      codeLabel.textContent = 'strudel code:';
+      codeBlock.appendChild(codeLabel);
+      const codeEl = document.createElement('code');
+      codeEl.className = 'sb-code';
+      if (isBuiltin) {
+        codeEl.textContent = '// Already included in Strudel';
+        codeEl.classList.add('dim');
       } else {
-        sampleNames = [selectedPack];
+        codeEl.textContent = importCode;
       }
-      loadedPacks.set(selectedPack, sampleNames);
-      this.engine.enableCdnSamples();
+      codeBlock.appendChild(codeEl);
+      detailPane.appendChild(codeBlock);
 
-      // Notify sampler modules
-      document.dispatchEvent(new CustomEvent('malstrom:samples-updated'));
+      // Load button
+      if (!isBuiltin) {
+        const btnLoad = document.createElement('button');
+        btnLoad.className = 'sb-load-btn transport-btn accent';
+        if (isLoaded) {
+          btnLoad.textContent = 'Loaded';
+          btnLoad.disabled = true;
+          btnLoad.classList.remove('accent');
+          btnLoad.classList.add('active');
+        } else {
+          btnLoad.textContent = 'Load Pack';
+          btnLoad.addEventListener('click', () => {
+            this.engine.addSampleImport(importCode);
 
-      // Mark as loaded in UI
-      packList.querySelectorAll('.sb-pack-item').forEach(el => {
-        if (el.textContent === selectedPack) el.classList.add('loaded');
-      });
-    });
+            // Fetch strudel.json to get sample names for the Sampler module
+            this._fetchPackSamples(pack.name).then(sampleNames => {
+              if (sampleNames.length > 0) {
+                loadedPacks.set(pack.name, sampleNames);
+                document.dispatchEvent(new CustomEvent('malstrom:samples-updated'));
+              }
+            });
+
+            btnLoad.textContent = 'Loaded';
+            btnLoad.disabled = true;
+            btnLoad.classList.remove('accent');
+            btnLoad.classList.add('active');
+
+            // Update pack list item
+            packList.querySelectorAll('.sb-pack-item').forEach(el => {
+              if (el.querySelector('.sb-pack-name')?.textContent === pack.name) {
+                el.classList.add('loaded');
+              }
+            });
+          });
+        }
+        detailPane.appendChild(btnLoad);
+      } else {
+        const note = document.createElement('div');
+        note.className = 'sb-detail-meta';
+        note.textContent = 'These samples are available by default — no import needed.';
+        detailPane.appendChild(note);
+      }
+
+      // Link to alternet site
+      const link = document.createElement('a');
+      link.className = 'sb-alternet-link';
+      link.href = ALTERNET_URL;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Browse on strudel-samples.alternet.site';
+      detailPane.appendChild(link);
+    };
+  }
+
+  // Fetch and parse the pack list HTML from strudel-samples.alternet.site
+  async _fetchPackList() {
+    const resp = await fetch(ALTERNET_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const html = await resp.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const rows = doc.querySelectorAll('.packs-table tbody tr');
+    const packs = [];
+    for (const row of rows) {
+      const nameBtn = row.querySelector('.pack-name-btn');
+      const countEl = row.querySelector('.pack-count');
+      if (!nameBtn) continue;
+      const name = nameBtn.textContent.trim();
+      const count = parseInt(countEl?.textContent || '0', 10);
+      packs.push({ name, count, builtin: name.startsWith('strudel.cc/') });
+    }
+    return packs;
+  }
+
+  // Build the strudel import code for a pack name
+  _getImportCode(packName) {
+    // packs with dots in first segment are URL-based (e.g. samples.grbt.com.au)
+    const firstSegment = packName.split('/')[0];
+    if (firstSegment.includes('.')) {
+      // URL-based pack — use the full URL
+      return `samples('https://${packName}/strudel.json')`;
+    }
+    // GitHub pack — use github: shorthand
+    return `samples('github:${packName}')`;
+  }
+
+  // Fetch the strudel.json for a pack to get sample names
+  async _fetchPackSamples(packName) {
+    try {
+      const firstSegment = packName.split('/')[0];
+      let url;
+      if (firstSegment.includes('.')) {
+        url = `https://${packName}/strudel.json`;
+      } else {
+        url = `https://raw.githubusercontent.com/${packName}/refs/heads/main/strudel.json`;
+      }
+      const resp = await fetch(url);
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      // Return sample names (keys that aren't metadata)
+      return Object.keys(data).filter(k => !k.startsWith('_'));
+    } catch {
+      return [];
+    }
   }
 }
 
