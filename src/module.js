@@ -43,6 +43,7 @@ export class Module {
     }
     header.appendChild(titleEl);
     header.appendChild(closeBtn);
+    if (this.desc) header.title = this.desc;
     el.appendChild(header);
 
     // Drag-to-reorder on header

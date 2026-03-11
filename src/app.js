@@ -212,6 +212,7 @@ class App {
       for (const modDef of category.modules) {
         const item = document.createElement('div');
         item.className = `palette-item ${category.cssClass}`;
+        if (modDef.desc) item.title = modDef.desc;
 
         const dot = document.createElement('span');
         dot.className = 'dot';
