@@ -21,12 +21,12 @@ export class SynthModule extends Module {
     return div;
   }
 
-  compile(inputCode) {
+  compile(inputCode, modCode) {
     const wave = this.selects.waveform?.value || 'sawtooth';
-    const fm = this.knobs.fmDepth.value;
-    let code = inputCode || '"c3 e3 g3"';
+    const fm = modCode || (this.knobs.fmDepth.value > 0 ? this.knobs.fmDepth.value.toFixed(1) : null);
+    let code = inputCode || 'note("c3 e3 g3")';
     code = `${code}.s("${wave}")`;
-    if (fm > 0) code += `.fmh(${fm.toFixed(1)})`;
+    if (fm) code += `.fmh(${fm})`;
     return code;
   }
 }

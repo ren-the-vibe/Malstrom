@@ -94,6 +94,6 @@ export class EuclidModule extends Module {
     const euclidCall = rotation > 0
       ? `.euclid(${hits}, ${steps}, ${rotation})`
       : `.euclid(${hits}, ${steps})`;
-    return inputCode ? `${inputCode}${euclidCall}` : `"c3"${euclidCall}`;
+    return inputCode ? `${inputCode}${euclidCall}` : `note("c3")${euclidCall}`;
   }
 }

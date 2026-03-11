@@ -41,7 +41,7 @@ export class WavetableModule extends Module {
 
   compile(inputCode) {
     const table = this.selects.table?.value || 'saw';
-    let code = inputCode || '"c3 e3 g3"';
+    let code = inputCode || 'note("c3 e3 g3")';
     return `${code}.s("${table}")`;
   }
 }

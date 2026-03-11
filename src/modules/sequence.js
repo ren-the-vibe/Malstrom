@@ -69,6 +69,6 @@ export class SequenceModule extends Module {
   compile() {
     const pattern = this.textInputs.pattern?.value || '';
     if (!pattern.trim()) return null;
-    return `"${pattern.trim()}"`;
+    return `note("${pattern.trim()}")`;
   }
 }

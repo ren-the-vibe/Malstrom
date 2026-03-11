@@ -98,7 +98,7 @@ export class SamplerModule extends Module {
   compile(inputCode) {
     const sample = this.selects.sample?.value || 'bd';
     const n = Math.round(this.knobs.n.value);
-    let code = inputCode || '"x"';
+    let code = inputCode || `s("${sample}")`;
     code = `${code}.s("${sample}")`;
     if (n > 0) code += `.n(${n})`;
     return code;
