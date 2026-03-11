@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src *; connect-src *; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src *; connect-src *; img-src 'self' data:; frame-src https://strudel-samples.alternet.site;">
   <title>Malstrom</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -46,26 +46,47 @@
     </div>
   </div>
 
-  <!-- Debug / Compiled Code Viewer -->
+  <!-- Code Preview Panel (toggleable) -->
+  <div id="code-panel" class="code-panel collapsed">
+    <div class="code-panel-header">
+      <button id="btn-toggle-code" class="code-panel-toggle" title="Toggle code preview">Strudel Code &#9650;</button>
+      <span id="code-panel-status" class="code-panel-status"></span>
+    </div>
+    <pre id="code-preview" class="code-preview"></pre>
+  </div>
+
+  <!-- Footer status bar -->
   <footer id="code-viewer">
     <span class="code-label">Strudel:</span>
     <code id="compiled-code"></code>
   </footer>
 
-  <!-- Sample Browser Modal -->
+  <!-- Sample Imports Modal -->
   <div id="sample-browser-modal" class="sb-overlay">
     <div class="sb-modal">
       <div class="sb-header">
-        <h3>Sample Packs</h3>
-        <input type="text" class="sb-search" placeholder="Search packs...">
+        <h3>Sample Imports</h3>
         <button class="sb-close">&times;</button>
       </div>
       <div class="sb-body">
-        <div class="sb-packs">
-          <div class="sb-pack-list"></div>
+        <!-- Left: managed list of import codes -->
+        <div class="sb-imports-pane">
+          <div class="sb-imports-toolbar">
+            <input type="text" class="sb-import-input" placeholder="samples('github:user/repo')">
+            <button class="sb-add-btn transport-btn accent">Add</button>
+          </div>
+          <div class="sb-import-list"></div>
+          <div class="sb-imports-hint">
+            Paste strudel sample import codes above. Browse the site on the right to find packs.
+          </div>
         </div>
-        <div class="sb-detail">
-          <div class="sb-detail-placeholder">Select a pack to see details</div>
+        <!-- Right: iframe to alternet site -->
+        <div class="sb-browse-pane">
+          <div class="sb-browse-toolbar">
+            <span class="sb-browse-label">strudel-samples.alternet.site</span>
+            <button class="sb-browse-reload transport-btn" title="Reload">&#8635;</button>
+          </div>
+          <iframe class="sb-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
         </div>
       </div>
     </div>

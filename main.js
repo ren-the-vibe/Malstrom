@@ -63,16 +63,31 @@ ipcMain.handle('load-project', async () => {
   if (sepIndex !== -1) {
     const headerStr = content.substring(0, sepIndex);
     code = content.substring(sepIndex + 5);
-    if (yaml) {
-      state = yaml.load(headerStr);
-    } else {
-      state = JSON.parse(headerStr);
+    try {
+      if (yaml) {
+        state = yaml.load(headerStr);
+      } else {
+        state = JSON.parse(headerStr);
+      }
+    } catch (e) {
+      // Header didn't parse — treat entire file as plain strudel code
+      return { canceled: false, plainStrudel: true, code: content, filePath: filePaths[0] };
     }
   } else {
-    if (yaml) {
-      state = yaml.load(content);
-    } else {
-      state = JSON.parse(content);
+    // No separator — try to parse as state (YAML/JSON), fall back to plain strudel
+    try {
+      if (yaml) {
+        state = yaml.load(content);
+      } else {
+        state = JSON.parse(content);
+      }
+      // Must have a modules array to be a valid project
+      if (!state || !Array.isArray(state.modules)) {
+        return { canceled: false, plainStrudel: true, code: content, filePath: filePaths[0] };
+      }
+    } catch (e) {
+      // Not valid YAML/JSON — treat as plain strudel code
+      return { canceled: false, plainStrudel: true, code: content, filePath: filePaths[0] };
     }
     code = '';
   }

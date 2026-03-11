@@ -9,71 +9,12 @@ import { loadedPacks } from './modules/sampler.js';
 
 const ALTERNET_URL = 'https://strudel-samples.alternet.site';
 
-// Embedded snapshot of strudel-samples.alternet.site pack list (fallback when Cloudflare blocks fetch)
-const EMBEDDED_PACKS = [
-  ['strudel.cc/tidal-drum-machines', 683], ['strudel.cc/vcsl', 128], ['strudel.cc/uzu-drumkit', 16],
-  ['strudel.cc/mridangam', 13], ['strudel.cc/piano', 1], ['samples.grbt.com.au', 629],
-  ['sonidosingapura/blu-mar-ten/Breaks', 448], ['sonidosingapura/blu-mar-ten/Riffs_Arps_Hits', 260],
-  ['sonidosingapura/blu-mar-ten/FX', 240], ['tidalcycles/Dirt-Samples', 218],
-  ['sonidosingapura/blu-mar-ten/Pads', 152], ['sonidosingapura/blu-mar-ten/Vocals', 136],
-  ['Bubobubobubobubo/Dough-Amiga', 116], ['sonidosingapura/blu-mar-ten/Bass', 114],
-  ['yaxu/spicule', 75], ['Bubobubobubobubo/Dough-Waveforms', 65],
-  ['Bubobubobubobubo/Dough-Fox', 63], ['Bubobubobubobubo/Dough-Bourges', 45],
-  ['neshanjo/strudel-producer-space-samples', 37], ['MartinMaguna/samplesKzur', 35],
-  ['mmmgarlic/randumsample', 35], ['mistipher/studel-beats', 32],
-  ['sandpills/v10101a-samples', 32], ['yaxu/clean-breaks', 32],
-  ['AustinOliverHaskell/ms-teams-sounds-strudel', 31], ['proudly-music/breaks', 28],
-  ['terrorhank/samples', 28], ['Bubobubobubobubo/Dough-Samples', 27],
-  ['k09/samples', 27], ['heavy-lifting/a-maze', 26], ['dagurkris/Tidalcycles', 25],
-  ['sound.intercrap.com/strudel/mellotron', 24], ['eddyflux/wax', 21],
-  ['bsssssss/strudel-samples/bs-breaks', 20], ['felixroos/estuary-samples', 19],
-  ['mamalLivecoder/samples', 19], ['alfredojarry/samples_eddyflux_crate', 18],
-  ['eddyflux/crate', 18], ['sonidosingapura/rochormatic', 18], ['felixroos/samples', 17],
-  ['tidalcycles/uzu-drumkit', 16], ['pavlovpavlov/samples', 15], ['emptyflash/samples', 13],
-  ['mot4i/garden', 13], ['yaxu/mrid', 13], ['indiepaleale/strudel-samples', 12],
-  ['sarefo/strudel', 12], ['Naaeeen/LENS', 11], ['algorave-dave/samples', 10],
-  ['byolim/breaks', 10], ['azhadsyed/strudel-samples', 9],
-  ['kyrsive/glorkglunk-wavetables', 9], ['creativenucleus/strudel-m8-168-dnb-jungle', 8],
-  ['KakuyaShiraishi/samples', 8], ['SutterChristian/sampuru', 8],
-  ['vasilymilovidov/samples', 8], ['ross-sec-audio/dsamples', 7],
-  ['tedthetrumpet/testpage/strudelsamples', 7],
-  ['bruveping/RepositorioDESonido_N_3/Codigo_Spectrum_2025', 6],
-  ['mot4i/loom/garden_of_possibilities', 6], ['mot4i/loom/velvet_blues', 6],
-  ['Prof12200/strudel_repo', 6], ['sonidosingapura/blu-mar-ten', 6],
-  ['bsssssss/strudel-samples/bs-sounds', 5],
-  ['Emanuel-de-Jong/L1C0-B3nLib_x86_EXE/assets/audio', 5],
-  ['mot4i/joyinerror/loopy_youpy', 5], ['kaiye10/strudelSamples', 4],
-  ['mysinglelise/msl-strudel-samples', 4], ['prismograph/departure', 4],
-  ['salsicha/capoeira_strudel', 4], ['TodePond/samples/v4', 4], ['TodePond/samples/v5', 4],
-  ['TristanCacqueray/mirus', 4], ['absentfriend2025/samples', 3], ['boggodan/bflute', 3],
-  ['Bubobubobubobubo/Dough-Amen', 3], ['hvillase/cavlp-25p', 3],
-  ['mot4i/loom/manganese_bubble_bath', 3],
-  ['bruveping/RepositorioDESonido_N_3/guitarra_experimental0001', 2],
-  ['ibleedicare/strudel-bank', 2], ['janpc01/samples', 2],
-  ['jessicaaaaaaaaaaaa/strudel-samples', 2], ['mot4i/loom/alpaca_2025', 2],
-  ['mot4i/loom/the_void_is_growing/vox', 2], ['smaudd/joonies-dnb-collection-strudel', 2],
-  ['bruveping/RepositorioDesonidosParaExperimentar02', 1], ['Bubobubobubobubo/Dough-Juj', 1],
-  ['chickenalibi/music', 1], ['cleary/samples-flbass', 1], ['cosmiclavaflow/samples', 1],
-  ['davidshipp/dtl', 1], ['edcrub/samp', 1], ['EloMorelo/samples', 1],
-  ['fstiffo/polifonia-samples', 1], ['gerzytet/strudel-samples', 1],
-  ['HelveticaScenario/trick-shot', 1], ['jpalcala/tidal', 1], ['kyrsive/gc-glitches', 1],
-  ['kyrsive/gc-glitches2', 1], ['kyrsive/gc-wavetables', 1], ['luvl4ne/breaks', 1],
-  ['MartinMaguna/luzmilacarpiosamples', 1], ['mot4i/joyinerror/fraxional_edit', 1],
-  ['mot4i/loom/a_damn_fine_cup_of_coffee', 1], ['mot4i/loom/chill', 1],
-  ['Nikeryms/Samples', 1], ['norrischris/samples', 1], ['potatoboiler/bolero', 1],
-  ['QuantumVillage/quantum-music', 1], ['reema7667/strudel-sounds', 1],
-  ['Samplesbit/Plucks', 1], ['Samplesbit/strudel_samples', 1], ['superbuggy/samples', 1],
-  ['switchangel/breaks', 1], ['switchangel/pad', 1], ['TorenUK/breaks', 1],
-  ['valjason/barrel', 1], ['YAGORAYMOND/samples', 1], ['yaxu/svgs', 1]
-];
-
 class App {
   constructor() {
     this.rack = null;
     this.cables = null;
     this.compiler = null;
     this.engine = null;
-    this._sampleIndex = null; // cached strudel.json
   }
 
   init() {
@@ -191,6 +132,9 @@ class App {
     // Sample browser
     this._initSampleBrowser();
 
+    // Code preview panel
+    this._initCodePanel();
+
     // Refresh cable positions on scroll/resize
     rackContainer.addEventListener('scroll', () => this.cables.refreshPositions());
     window.addEventListener('resize', () => this.cables.refreshPositions());
@@ -249,6 +193,7 @@ class App {
     const compiledCodeEl = document.getElementById('compiled-code');
     compiledCodeEl.classList.remove('error');
     compiledCodeEl.textContent = code || '(no connections to output)';
+    this._updateCodePreview(code);
     return code;
   }
 
@@ -276,6 +221,40 @@ class App {
     });
   }
 
+  // ── Code Preview Panel ──
+
+  _initCodePanel() {
+    const panel = document.getElementById('code-panel');
+    const toggleBtn = document.getElementById('btn-toggle-code');
+    if (!panel || !toggleBtn) return;
+
+    toggleBtn.addEventListener('click', () => {
+      panel.classList.toggle('collapsed');
+      toggleBtn.innerHTML = panel.classList.contains('collapsed')
+        ? 'Strudel Code &#9650;'
+        : 'Strudel Code &#9660;';
+    });
+  }
+
+  _updateCodePreview(moduleCode) {
+    const previewEl = document.getElementById('code-preview');
+    const statusEl = document.getElementById('code-panel-status');
+    if (!previewEl) return;
+
+    // Build full code: sample imports + module code
+    const imports = this.engine.getSampleImports();
+    let fullCode = '';
+    if (imports.length > 0) {
+      fullCode = imports.map(s => `await ${s}`).join('\n') + '\n\n';
+    }
+    fullCode += moduleCode || '// (no connections to output)';
+
+    previewEl.textContent = fullCode;
+    if (statusEl) {
+      statusEl.textContent = imports.length > 0 ? `${imports.length} sample import(s)` : '';
+    }
+  }
+
   // ── Save / Load ──
 
   _getProjectState() {
@@ -284,7 +263,8 @@ class App {
       from: { moduleId: c.from.moduleId, jackName: c.from.jackName },
       to: { moduleId: c.to.moduleId, jackName: c.to.jackName }
     }));
-    return { modules, connections };
+    const sampleImports = this.engine.getSampleImports();
+    return { modules, connections, sampleImports };
   }
 
   async _saveProject() {
@@ -309,8 +289,22 @@ class App {
     await this.engine.stop();
     document.getElementById('btn-play').classList.remove('playing', 'error');
 
+    // Check if this is a plain strudel code file (no frontmatter)
+    if (result.plainStrudel) {
+      this._handlePlainStrudel(result.code);
+      return;
+    }
+
     // Clear current state
     this.rack.clear();
+
+    // Restore sample imports
+    if (result.state.sampleImports) {
+      for (const imp of result.state.sampleImports) {
+        this.engine.addSampleImport(imp);
+      }
+      this._refreshImportList();
+    }
 
     // Rebuild with ID mapping
     const idMap = {};
@@ -335,228 +329,118 @@ class App {
     });
   }
 
+  _handlePlainStrudel(code) {
+    // For now, show a clear error - this can be refined later
+    const compiledCodeEl = document.getElementById('compiled-code');
+    compiledCodeEl.textContent = "CAN'T PARSE THIS STRUDEL INTO MALSTROM — file contains raw strudel code without module configuration";
+    compiledCodeEl.classList.add('error');
+
+    // Show the code in the preview panel so the user can see it
+    const previewEl = document.getElementById('code-preview');
+    if (previewEl) {
+      previewEl.textContent = '// Imported strudel code (cannot decompose into modules):\n' + code;
+    }
+    const panel = document.getElementById('code-panel');
+    if (panel) {
+      panel.classList.remove('collapsed');
+      const toggleBtn = document.getElementById('btn-toggle-code');
+      if (toggleBtn) toggleBtn.innerHTML = 'Strudel Code &#9660;';
+    }
+  }
+
   // ── Sample Browser ──
-  // Fetches pack list from strudel-samples.alternet.site, lets user browse
-  // and load packs. Loading a pack adds samples('github:...') to the engine preamble.
 
   _initSampleBrowser() {
     const modal = document.getElementById('sample-browser-modal');
     const btnSamples = document.getElementById('btn-samples');
     if (!modal || !btnSamples) return;
 
-    const searchInput = modal.querySelector('.sb-search');
-    const packList = modal.querySelector('.sb-pack-list');
-    const detailPane = modal.querySelector('.sb-detail');
     const btnClose = modal.querySelector('.sb-close');
+    const importInput = modal.querySelector('.sb-import-input');
+    const btnAdd = modal.querySelector('.sb-add-btn');
+    const importList = modal.querySelector('.sb-import-list');
+    const iframe = modal.querySelector('.sb-iframe');
+    const btnReload = modal.querySelector('.sb-browse-reload');
 
-    let packs = null; // [{name, count, builtin}]
-    let selectedPack = null;
+    // Store reference for external refresh
+    this._importListEl = importList;
 
     // Close modal
     const closeModal = () => modal.classList.remove('visible');
     btnClose.addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-    // Open modal and fetch pack list
-    btnSamples.addEventListener('click', async () => {
+    // Open modal
+    btnSamples.addEventListener('click', () => {
       modal.classList.add('visible');
-      if (!packs) {
-        packList.innerHTML = '<div class="sb-loading">Loading packs from strudel-samples.alternet.site...</div>';
-        try {
-          packs = await this._fetchPackList();
-        } catch (err) {
-          packList.innerHTML = `<div class="sb-loading">Failed to load packs: ${err.message}</div>`;
-          return;
-        }
+      // Load iframe on first open
+      if (iframe.src === 'about:blank') {
+        iframe.src = ALTERNET_URL;
       }
-      renderPacks('');
+      this._renderImportList(importList);
     });
 
-    searchInput?.addEventListener('input', () => renderPacks(searchInput.value));
-
-    const renderPacks = (filter) => {
-      packList.innerHTML = '';
-      if (!packs) return;
-      const filtered = packs.filter(p =>
-        !filter || p.name.toLowerCase().includes(filter.toLowerCase())
-      );
-      for (const pack of filtered) {
-        const item = document.createElement('div');
-        item.className = 'sb-pack-item';
-        if (this.engine.getSampleImports().some(s => s.includes(pack.name))) {
-          item.classList.add('loaded');
-        }
-        if (pack.builtin) item.classList.add('builtin');
-
-        const nameEl = document.createElement('span');
-        nameEl.className = 'sb-pack-name';
-        nameEl.textContent = pack.name;
-        item.appendChild(nameEl);
-
-        const countEl = document.createElement('span');
-        countEl.className = 'sb-pack-count';
-        countEl.textContent = pack.count;
-        item.appendChild(countEl);
-
-        item.addEventListener('click', () => {
-          packList.querySelectorAll('.sb-pack-item').forEach(el => el.classList.remove('selected'));
-          item.classList.add('selected');
-          selectedPack = pack;
-          renderDetail(pack);
-        });
-        packList.appendChild(item);
-      }
+    // Add import code
+    const addImport = () => {
+      const code = importInput.value.trim();
+      if (!code) return;
+      this.engine.addSampleImport(code);
+      importInput.value = '';
+      this._renderImportList(importList);
+      this._recompile();
     };
 
-    const renderDetail = (pack) => {
-      const isBuiltin = pack.name.startsWith('strudel.cc/');
-      const importCode = isBuiltin ? null : this._getImportCode(pack.name);
-      const isLoaded = importCode && this.engine.getSampleImports().includes(importCode);
+    btnAdd.addEventListener('click', addImport);
+    importInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addImport();
+    });
 
-      detailPane.innerHTML = '';
+    // Reload iframe
+    btnReload.addEventListener('click', () => {
+      iframe.src = ALTERNET_URL;
+    });
+  }
 
-      const title = document.createElement('h3');
-      title.className = 'sb-detail-title';
-      title.textContent = pack.name;
-      detailPane.appendChild(title);
+  _renderImportList(container) {
+    if (!container) container = this._importListEl;
+    if (!container) return;
+    container.innerHTML = '';
 
-      const meta = document.createElement('div');
-      meta.className = 'sb-detail-meta';
-      meta.textContent = `${pack.count} samples`;
-      detailPane.appendChild(meta);
+    const imports = this.engine.getSampleImports();
+    if (imports.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'sb-import-empty';
+      empty.textContent = 'No sample imports yet';
+      container.appendChild(empty);
+      return;
+    }
 
-      // Strudel code block
-      const codeBlock = document.createElement('div');
-      codeBlock.className = 'sb-code-block';
-      const codeLabel = document.createElement('span');
-      codeLabel.className = 'sb-code-label';
-      codeLabel.textContent = 'strudel code:';
-      codeBlock.appendChild(codeLabel);
+    for (const imp of imports) {
+      const item = document.createElement('div');
+      item.className = 'sb-import-item';
+
       const codeEl = document.createElement('code');
-      codeEl.className = 'sb-code';
-      if (isBuiltin) {
-        codeEl.textContent = '// Already included in Strudel';
-        codeEl.classList.add('dim');
-      } else {
-        codeEl.textContent = importCode;
-      }
-      codeBlock.appendChild(codeEl);
-      detailPane.appendChild(codeBlock);
+      codeEl.className = 'sb-import-code';
+      codeEl.textContent = imp;
+      item.appendChild(codeEl);
 
-      // Load button
-      if (!isBuiltin) {
-        const btnLoad = document.createElement('button');
-        btnLoad.className = 'sb-load-btn transport-btn accent';
-        if (isLoaded) {
-          btnLoad.textContent = 'Loaded';
-          btnLoad.disabled = true;
-          btnLoad.classList.remove('accent');
-          btnLoad.classList.add('active');
-        } else {
-          btnLoad.textContent = 'Load Pack';
-          btnLoad.addEventListener('click', () => {
-            this.engine.addSampleImport(importCode);
+      const btnRemove = document.createElement('button');
+      btnRemove.className = 'sb-import-remove';
+      btnRemove.textContent = '\u00d7';
+      btnRemove.title = 'Remove';
+      btnRemove.addEventListener('click', () => {
+        this.engine.removeSampleImport(imp);
+        this._renderImportList(container);
+        this._recompile();
+      });
+      item.appendChild(btnRemove);
 
-            // Fetch strudel.json to get sample names for the Sampler module
-            this._fetchPackSamples(pack.name).then(sampleNames => {
-              if (sampleNames.length > 0) {
-                loadedPacks.set(pack.name, sampleNames);
-                document.dispatchEvent(new CustomEvent('malstrom:samples-updated'));
-              }
-            });
-
-            btnLoad.textContent = 'Loaded';
-            btnLoad.disabled = true;
-            btnLoad.classList.remove('accent');
-            btnLoad.classList.add('active');
-
-            // Update pack list item
-            packList.querySelectorAll('.sb-pack-item').forEach(el => {
-              if (el.querySelector('.sb-pack-name')?.textContent === pack.name) {
-                el.classList.add('loaded');
-              }
-            });
-          });
-        }
-        detailPane.appendChild(btnLoad);
-      } else {
-        const note = document.createElement('div');
-        note.className = 'sb-detail-meta';
-        note.textContent = 'These samples are available by default — no import needed.';
-        detailPane.appendChild(note);
-      }
-
-      // Link to alternet site
-      const link = document.createElement('a');
-      link.className = 'sb-alternet-link';
-      link.href = ALTERNET_URL;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = 'Browse on strudel-samples.alternet.site';
-      detailPane.appendChild(link);
-    };
-  }
-
-  // Fetch and parse the pack list HTML from strudel-samples.alternet.site
-  // Falls back to an embedded snapshot if the site is behind Cloudflare challenge
-  async _fetchPackList() {
-    try {
-      const resp = await fetch(ALTERNET_URL);
-      if (resp.ok) {
-        const html = await resp.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const rows = doc.querySelectorAll('.packs-table tbody tr');
-        if (rows.length > 0) {
-          const packs = [];
-          for (const row of rows) {
-            const nameBtn = row.querySelector('.pack-name-btn');
-            const countEl = row.querySelector('.pack-count');
-            if (!nameBtn) continue;
-            const name = nameBtn.textContent.trim();
-            const count = parseInt(countEl?.textContent || '0', 10);
-            packs.push({ name, count, builtin: name.startsWith('strudel.cc/') });
-          }
-          return packs;
-        }
-      }
-    } catch { /* Cloudflare challenge or network error — fall through to embedded list */ }
-
-    // Embedded snapshot of packs from strudel-samples.alternet.site
-    return EMBEDDED_PACKS.map(([name, count]) => ({
-      name, count, builtin: name.startsWith('strudel.cc/')
-    }));
-  }
-
-  // Build the strudel import code for a pack name
-  _getImportCode(packName) {
-    // packs with dots in first segment are URL-based (e.g. samples.grbt.com.au)
-    const firstSegment = packName.split('/')[0];
-    if (firstSegment.includes('.')) {
-      // URL-based pack — use the full URL
-      return `samples('https://${packName}/strudel.json')`;
+      container.appendChild(item);
     }
-    // GitHub pack — use github: shorthand
-    return `samples('github:${packName}')`;
   }
 
-  // Fetch the strudel.json for a pack to get sample names
-  async _fetchPackSamples(packName) {
-    try {
-      const firstSegment = packName.split('/')[0];
-      let url;
-      if (firstSegment.includes('.')) {
-        url = `https://${packName}/strudel.json`;
-      } else {
-        url = `https://raw.githubusercontent.com/${packName}/refs/heads/main/strudel.json`;
-      }
-      const resp = await fetch(url);
-      if (!resp.ok) return [];
-      const data = await resp.json();
-      // Return sample names (keys that aren't metadata)
-      return Object.keys(data).filter(k => !k.startsWith('_'));
-    } catch {
-      return [];
-    }
+  _refreshImportList() {
+    this._renderImportList(this._importListEl);
   }
 }
 

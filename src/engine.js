@@ -63,6 +63,10 @@ export class Engine {
     this._sampleImports.add(importCode);
   }
 
+  removeSampleImport(importCode) {
+    this._sampleImports.delete(importCode);
+  }
+
   getSampleImports() {
     return [...this._sampleImports];
   }
