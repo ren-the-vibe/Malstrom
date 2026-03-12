@@ -306,7 +306,7 @@ class App {
     const imports = this.engine.getSampleImports();
     let fullCode = '';
     if (imports.length > 0) {
-      fullCode = imports.map(s => `await ${s}`).join('\n') + '\n\n';
+      fullCode = imports.join('\n') + '\n\n';
     }
     fullCode += moduleCode || '// (no connections to output)';
 
@@ -518,8 +518,9 @@ class App {
       const channel = this.rack.addChannel(track.name);
       let prevModule = null;
 
-      for (const method of track.chain) {
-        const module = this._createModuleFromMethod(method);
+      for (let i = 0; i < track.chain.length; i++) {
+        const method = track.chain[i];
+        const module = this._createModuleFromMethod(method, i === 0);
         if (!module) continue;
 
         module.onChange = () => this._recompile();
@@ -602,7 +603,7 @@ class App {
     }
   }
 
-  _createModuleFromMethod(method) {
+  _createModuleFromMethod(method, isSource = true) {
     // For source functions like s(), check if args are a complex pattern
     // that won't fit in a Sampler module's dropdown
     if ((method.method === 's' || method.method === 'sound') && method.args) {
@@ -624,7 +625,12 @@ class App {
     if (moduleType) {
       const module = createModule(moduleType);
       if (module) {
-        // Args will be applied after render in _handlePlainStrudel
+        // If this is mid-chain but the module has no inputs (source-only like
+        // Sequence, Noise, etc.), it would break the cable chain. Use a Code
+        // module instead so it can receive input and chain properly.
+        if (!isSource && module.inputs.length === 0) {
+          return this._createCodeModule(method.raw);
+        }
         return module;
       }
     }

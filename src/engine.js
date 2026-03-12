@@ -41,7 +41,7 @@ export class Engine {
     // Prepend sample pack imports
     let fullCode = code;
     if (this._sampleImports.size > 0) {
-      const imports = [...this._sampleImports].map(s => `await ${s}`).join('\n');
+      const imports = [...this._sampleImports].join('\n');
       fullCode = imports + '\n' + code;
     }
 
